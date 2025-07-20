@@ -35,6 +35,7 @@
 #include <thread>
 #include <functional>
 #include <queue>
+#include <atomic>
 
 // Custom libraries
 #include "../utils/log_system.h"
@@ -76,9 +77,27 @@ public:
     void enqueue(std::function<void()> task) {
         {
             std::unique_lock<std::mutex> lock(queue_mutex);
-            tasks.push(std::move(task));
+            tasks.push([this, task = std::move(task)] {
+                active_tasks++;
+                try {
+                    task();
+                } catch (...) {
+                    // Optional: handle exception
+                }
+                active_tasks--;
+                std::unique_lock<std::mutex> lock(task_mutex);
+                task_finished_cv.notify_all();
+            });
         }
         condition.notify_one();
+    }
+
+    void wait_for_tasks() {
+        std::unique_lock<std::mutex> lock(task_mutex);
+        task_finished_cv.wait(lock, [this] {
+            std::unique_lock<std::mutex> qlock(queue_mutex);
+            return tasks.empty() && active_tasks == 0;
+        });
     }
 
     ~ThreadPool() {
@@ -91,6 +110,9 @@ public:
     }
 
 private:
+    std::mutex task_mutex;
+    std::condition_variable task_finished_cv;
+    std::atomic<int> active_tasks = 0;
     std::vector<std::thread> workers;
     std::queue<std::function<void()>> tasks;
     std::mutex queue_mutex;

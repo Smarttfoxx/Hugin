@@ -592,7 +592,7 @@ std::string SendUDPProbe(const std::string& ip, int port, const std::string& pay
     src.sin_port = htons(1337);
     src.sin_addr.s_addr = INADDR_ANY;
     if (bind(sock, (sockaddr*)&src, sizeof(src)) < 0) {
-        perror("[ERROR] bind failed");
+        logsys.Error("bind failed.");
     }
 
     struct timeval tv { timeoutSeconds, 0 };
@@ -608,11 +608,11 @@ std::string SendUDPProbe(const std::string& ip, int port, const std::string& pay
                            (struct sockaddr*)&target, sizeof(target));
 
     if (sentBytes != (int)payload.size()) {
-        std::cerr << "[ERROR] Failed to send full UDP payload to port " << port << "\n";
+        logsys.Error("Failed to send full UDP payload to port", port);
     }
 
     if (sentBytes > 0) {
-        std::cout << "[DEBUG] Sent " << sentBytes << " bytes to " << ip << ":" << port << "\n";
+        logsys.Debug("Sent", sentBytes, "bytes to", ip, "at port", port);
     }
 
     // Wait for response
@@ -623,10 +623,10 @@ std::string SendUDPProbe(const std::string& ip, int port, const std::string& pay
     close(sock);
 
     if (bytes > 0) {
-        std::cout << "[DEBUG] Received " << bytes << " bytes from " << ip << ":" << port << "\n";
+        logsys.Debug("Received", bytes, "bytes from", ip, "at port", port);
         return std::string(buffer, bytes);
     } else {
-        std::cout << "[DEBUG] no bytes received\n";
+        logsys.Debug("no bytes received");
     }
     return "";
 }

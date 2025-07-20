@@ -112,7 +112,7 @@ ParsedArgs ParseArguments(int argc, char* argv[]) {
             args.luaScripts.push_back(argv[++i]);
 
         } else if (arg == "-U" || arg == "--udp") {
-            args.enableUDP = true;
+            args.enableUDPScan = true;
 
         } else if (arg == "-h" || arg == "--help") {
             args.showHelp = true;

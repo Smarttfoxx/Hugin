@@ -31,14 +31,14 @@ struct ParsedArgs {
     std::vector<int> ports;
     std::vector<std::string> luaScripts;
     std::string interface;
-    int threadCount = 100;
+    int threadCount = 2000;
     int portTimeout = 1;
     int serviceTimeout = 1;
     bool enableTCPScan = false;
     bool enableARPScan = false;
+    bool enableUDPScan = false;
     bool enableFindService = false;
     bool enableLua = false;
-    bool enableUDP = false;
     bool showHelp = false;
 };
 
