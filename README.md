@@ -19,13 +19,13 @@
 
 ### Requirements
 
-- C++17
+- C++20 or later
 - Linux
 
 ### Compilation
 
 ```bash
-make && make clean
+g++ -std=c++20 main.cpp -o hugin -llua -ldl -lm -lpthread -lldap -llber -lldns
 ```
 
 ---
