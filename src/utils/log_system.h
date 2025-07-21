@@ -29,22 +29,15 @@
  */
 struct LogSystem {
     template<typename... Args>
-    void Debug(const char* message, Args&&... args) {
-        std::cout << "[DEBUG]" << message;
-        ((std::cout << ' ' << std::forward<Args>(args)), ...);
-        std::cout << std::endl;
-    }
-    
-    template<typename... Args>
     void Error(const char* message, Args&&... args) {
-        std::cout << "[ERROR] " << message;
+        std::cout << "[X] " << message;
         ((std::cout << ' ' << std::forward<Args>(args)), ...);
         std::cout << std::endl;
     }
 
     template<typename... Args>
     void Warning(const char* message, Args&&... args) {
-        std::cout << "[WARNING] " << message;
+        std::cout << "[!] " << message;
         ((std::cout << ' ' << std::forward<Args>(args)), ...);
         std::cout << std::endl;
     }

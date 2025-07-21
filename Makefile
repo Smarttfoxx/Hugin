@@ -31,4 +31,4 @@ $(TARGET): $(OBJS)
 
 # Clean up
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -f $(OBJS)

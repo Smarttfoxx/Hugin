@@ -27,7 +27,6 @@
 #include "utils/log_system.h"
 #include "visuals/visuals.h"
 #include "engine/scan_engine.h"
-#include <chrono>
 
 int main(int argc, char* argv[]) {
     RenderBanner();
@@ -38,8 +37,6 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    auto initScanTime = std::chrono::system_clock::now();
-
     std::vector<HostInstance> validHosts;
     for (auto& host : args.hosts) {
         if (!IsValidIP(host.ipValue)) continue;
@@ -49,53 +46,41 @@ int main(int argc, char* argv[]) {
     }
 
     ThreadPool pool(args.threadCount);
+
     for (auto& host : validHosts) {
-
         pool.enqueue([&, host]() {
+            logsys.NewEvent("Scanning", host.ipValue);
             std::vector<int> openPorts;
-            std::string serviceInfo;
-            logsys.NewEvent("Scanning host", host.ipValue);
 
-            if (!args.enableTCPScan || !args.enableUDPScan) {
+            if (!args.enableTCPScan) {
                 openPorts = PortScanSyn(host.ipValue, args.ports, args.portTimeout);
             }
 
             for (int port : openPorts) {
+                std::string banner;
                 if (args.enableFindService) {
-                    serviceInfo = ServiceBannerGrabber(host.ipValue, port, args.serviceTimeout);
+                    banner = ServiceBannerGrabber(host.ipValue, port, args.serviceTimeout);
                 }
-                
                 std::string udp_reply;
-                if (args.enableUDPScan) {
+                if (args.enableUDP) {
                     std::unordered_set<int> portSet(args.ports.begin(), args.ports.end());
                     auto udp_payloads = ParseSelectedUDPProbes("nmap-payloads.txt", portSet);
                     if (udp_payloads.count(port)) {
                         udp_reply = SendUDPProbe(host.ipValue, port, udp_payloads[port], 5);
                     }
                 }
-
                 std::string lua_result;
                 if (args.enableLua && !args.luaScripts.empty()) {
                     lua_result = RunLuaScript(args.luaScripts[0], host.ipValue, port);
                 }
 
-                logsys.NewEvent("Found open Port", port);
-                if (!serviceInfo.empty()) logsys.Info("|---Service Info:", serviceInfo);
-                if (!udp_reply.empty()) logsys.Info("|---UDP Reply:", udp_reply);
-                if (!lua_result.empty()) logsys.Info("|---Lua Output:", lua_result);
+                logsys.Info("Open Port:", port);
+                if (!banner.empty()) logsys.CommonText("  Service:", banner);
+                if (!udp_reply.empty()) logsys.CommonText("  UDP Reply:", udp_reply);
+                if (!lua_result.empty()) logsys.CommonText("  Lua Output:", lua_result);
             }
         });
     }
-
-    pool.wait_for_tasks();
-    
-    auto endScanTime = std::chrono::system_clock::now();
-    auto scanDuration = std::chrono::duration_cast<std::chrono::seconds>(endScanTime - initScanTime);
-    int totalSeconds = scanDuration.count();
-    int minutes = totalSeconds / 60;
-    int seconds = totalSeconds % 60;
-
-    std::cout << "\n[*] Scan completed in " << minutes << "m" << seconds << "s" << "\n";
 
     return 0;
 }
