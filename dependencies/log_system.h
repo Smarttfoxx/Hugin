@@ -22,6 +22,7 @@
 */
 
 #pragma once
+
 #include <iostream>
 
 /**
@@ -64,4 +65,4 @@ struct LogSystem {
     }
 
 };
-inline LogSystem logsys;
+LogSystem logsys;

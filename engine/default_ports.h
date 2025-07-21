@@ -21,11 +21,13 @@
 * and you are welcome to redistribute it under certain conditions.
 */
 
+#pragma once
+
 // C++ libraries
 #include <vector>
 
 // Custom libraries
-#include "default_ports.h"
+#include "../dependencies/helper_functions.hpp"
 
 std::vector<int> common_ports_thousand = ReadFile("/usr/share/hugin/wordlists/hugin-ports-top1000.txt");
 std::vector<int> common_web_ports = ReadFile("/usr/share/hugin/wordlists/hugin-ports-topweb.txt");
