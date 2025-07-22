@@ -373,7 +373,7 @@ std::string DetectDNSService(const std::string& ipValue, int port) {
         } else if (version.find("Microsoft") != std::string::npos) {
             result << " Microsoft DNS";
         } else {
-            result << " " << version;
+            result << "DNS Service " << version;
         }
     }
 
