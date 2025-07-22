@@ -31,14 +31,14 @@
 struct LogSystem {
     template<typename... Args>
     void Error(const char* message, Args&&... args) {
-        std::cout << "[X] " << message;
+        std::cout << "[ERROR] " << message;
         ((std::cout << ' ' << std::forward<Args>(args)), ...);
         std::cout << std::endl;
     }
 
     template<typename... Args>
     void Warning(const char* message, Args&&... args) {
-        std::cout << "[!] " << message;
+        std::cout << "[WARNING] " << message;
         ((std::cout << ' ' << std::forward<Args>(args)), ...);
         std::cout << std::endl;
     }
@@ -65,4 +65,5 @@ struct LogSystem {
     }
 
 };
-LogSystem logsys;
+
+inline LogSystem logsys;

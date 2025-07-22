@@ -21,73 +21,7 @@
 * and you are welcome to redistribute it under certain conditions.
 */
 
-#pragma once
-
-// Support for lua scripting
-extern "C" {
-#include <lua.h>
-#include <lualib.h>
-#include <lauxlib.h>
-}
-
-// C++ libraries
-#include <vector>
-#include <unordered_set>
-#include <unordered_map>
-#include <chrono>
-#include <thread>
-#include <cstring>
-#include <string>
-#include <fcntl.h>
-#include <unistd.h>
-#include <iostream>
-#include <errno.h>
-#include <sstream>
-#include <iomanip>
-#include <algorithm>
-#include <cctype>
-#include <atomic>
-
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <netinet/ip.h>
-#include <netinet/in.h>
-#include <netinet/ip_icmp.h>
-#include <netinet/tcp.h>
-#include <net/ethernet.h>
-#include <netpacket/packet.h>
-#include <net/if.h>
-#include <net/if_arp.h>
-#include <netinet/if_ether.h>
-
-#include <sys/socket.h>
-#include <sys/epoll.h>
-#include <sys/time.h>
-#include <sys/ioctl.h>
-
-#define LDAP_DEPRECATED 1
-#include <ldap.h>
-
-#include <ldns/ldns.h>
-
-// Custom libraries
-#include "default_ports.h"
-#include "../dependencies/helper_functions.hpp"
-
-struct HostInstance {
-    const std::string ipValue;
-    std::vector<int> openPorts;
-
-    HostInstance(const std::string& ip) : ipValue(ip){};
-};
-
-struct pseudo_header {
-    uint32_t sourceIP;
-    uint32_t targetIP;
-    uint8_t placeholder;
-    uint8_t protocol;
-    uint16_t tcp_length;
-};
+#include "scan_engine.h"
 
 /**
  * Calculates the Internet checksum for a buffer of bytes.
@@ -155,7 +89,9 @@ std::string GetLocalIP(const std::string& ipValue) {
     dest_addr.sin_port = htons(53);
 
     inet_pton(AF_INET, ipValue.c_str(), &dest_addr.sin_addr);
-    connect(sockfd, (struct sockaddr*)&dest_addr, sizeof(dest_addr));
+    if (connect(sockfd, (struct sockaddr*)&dest_addr, sizeof(dest_addr)) != 0) {
+        logsys.Error("Failed to connect to host.");
+    }
 
     struct sockaddr_in local_addr = {};
     socklen_t addr_len = sizeof(local_addr);
@@ -706,7 +642,9 @@ std::vector<int> PortScanSyn(const std::string& ipValue, const std::vector<int>&
         tmp_dst.sin_port = htons(53);
 
         inet_pton(AF_INET, ipValue.c_str(), &tmp_dst.sin_addr);
-        connect(tmp_sock, (sockaddr*)&tmp_dst, sizeof(tmp_dst));
+        if (connect(tmp_sock, (sockaddr*)&tmp_dst, sizeof(tmp_dst))) {
+            logsys.Error("Failed to connect to host.");
+        }
 
         sockaddr_in local_addr{};
         socklen_t len = sizeof(local_addr);
@@ -791,8 +729,6 @@ std::vector<int> PortScanSyn(const std::string& ipValue, const std::vector<int>&
         for (int i = 0; i < nfds; ++i) {
             if (events[i].data.fd == raw_sock) {
                 char buffer[4096];
-                sockaddr_in sender{};
-                socklen_t sender_len = sizeof(sender);
                 
                 while (true) {
                     sockaddr_in sender{};
@@ -809,7 +745,7 @@ std::vector<int> PortScanSyn(const std::string& ipValue, const std::vector<int>&
                     if (iph->protocol != IPPROTO_TCP) continue;
 
                     int ip_header_len = iph->ihl * 4;
-                    if (len < ip_header_len + sizeof(tcphdr)) continue;
+                    if (len < ip_header_len + static_cast<int>(sizeof(tcphdr))) continue;
 
                     struct tcphdr *tcph = (struct tcphdr *)(buffer + ip_header_len);
 

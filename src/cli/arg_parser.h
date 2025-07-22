@@ -23,13 +23,31 @@
 
 #pragma once
 
-// C++ libraries
+#include <string>
 #include <vector>
+#include <mutex>
+#include <atomic>
+#include <sstream>
+#include <algorithm>
+#include <arpa/inet.h>
 
-// Custom libraries
-#include "../dependencies/helper_functions.hpp"
+#include "../interfaces/visuals.h"
+#include "../engine/scan_engine.h"
+#include "../utilities/log_system.h"
 
-std::vector<int> common_ports_thousand = ReadFile("/usr/share/hugin/wordlists/hugin-ports-top1000.txt");
-std::vector<int> common_web_ports = ReadFile("/usr/share/hugin/wordlists/hugin-ports-topweb.txt");
-std::vector<int> common_ftp_ports = ReadFile("/usr/share/hugin/wordlists/hugin-ports-topftp.txt");
-std::vector<int> common_ldap_ports = { 389, 363, 3268, 3269 };
+struct ProgramConfig {
+    int portScan_timeout = 1;
+    int servScan_timeout = 1;
+    int threadAmount = 100;
+    bool isHostUp = false;
+    bool enableFindService = false;
+    bool enableTCPScan = false;
+    bool enableARPScan = false;
+    bool enableLUA = false;
+    std::string networkInterface;
+    std::vector<HostInstance> HostInstances;
+    std::vector<int> portsToScan;
+    std::vector<std::string> luaScripts;
+};
+
+bool ParseArguments(int argc, char* argv[], ProgramConfig& config);

@@ -21,13 +21,7 @@
 * and you are welcome to redistribute it under certain conditions.
 */
 
-#pragma once
-
-// C++ libraries
-#include <iostream>
-
-// Custom libraries
-#include "../dependencies/helper_functions.hpp"
+#include "visuals.h"
 
 void RenderBanner() {
     logsys.CommonText("Hugin - Network Scanner 1.0");
