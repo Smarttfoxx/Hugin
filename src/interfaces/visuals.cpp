@@ -24,7 +24,14 @@
 #include "visuals.h"
 
 void RenderBanner() {
-    logsys.CommonText("Hugin - Network Scanner 1.0");
+    std::cout << R"(
+  _    _  _    _   _____  _____  _   _ 
+ | |  | || |  | | / ____||_   _|| \ | |
+ | |__| || |  | || |  __   | |  |  \| |
+ |  __  || |  | || | |_ |  | |  | . ` |
+ | |  | || |__| || |__| | _| |_ | |\  |
+ |_|  |_| \____/  \_____||_____||_| \_|
+)" << std::endl;
 }
 
 void RenderHelp() {

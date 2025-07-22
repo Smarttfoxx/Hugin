@@ -24,6 +24,14 @@
 #include "arg_parser.h"
 
 bool ParseArguments(int argc, char* argv[], ProgramConfig& config) {
+
+    if (argc <= 1) {
+        logsys.Error("No arguments were entered.");
+        logsys.Info("Usage: hugin -i <IP> -p <PORT(s)> <options>");
+        logsys.Info("Run hugin -h to see the help section.");
+        return false;
+    }
+
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
 
