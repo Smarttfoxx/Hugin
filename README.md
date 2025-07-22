@@ -69,16 +69,16 @@ sudo make install
 
 ```
 # Scan top 100 common ports on 192.168.1.1 using 200 threads
-./hugin -i 192.168.1.1 -Tp 100 -Th 200
+sudo hugin -i 192.168.1.1 -Tp 100 -Th 200
 
-# Full TCP SYN scan of all 65535 ports (requires root)
-sudo ./hugin -i 192.168.1.1 -Ap
+# Full TCP SYN scan of all 65535 ports
+sudo hugin -i 192.168.1.1 -Ap
 
 # TCP Connect scan with banner grabbing on selected ports
-./hugin -i 192.168.1.1 -p 21,22,80 -Ts -S
+sudo hugin -i 192.168.1.1 -p 21,22,80 -Ts -S
 
 # Scan a custom port range with default threads and SYN scan
-./hugin -i 192.168.1.1 -p 20-30
+sudo hugin -i 192.168.1.1 -p 20-30
 ```
 
 ---
