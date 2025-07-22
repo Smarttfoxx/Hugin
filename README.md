@@ -28,7 +28,7 @@
 ### Compilation
 
 ```bash
-make && make clean
+sudo make install
 ```
 
 ---
