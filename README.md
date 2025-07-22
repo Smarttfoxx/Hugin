@@ -25,7 +25,7 @@
 - LDNS
 - Lua
 
-### Compilation
+### Installation
 
 ```bash
 sudo make install
