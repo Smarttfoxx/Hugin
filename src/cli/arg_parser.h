@@ -38,7 +38,7 @@
 struct ProgramConfig {
     int portScan_timeout = 1;
     int servScan_timeout = 1;
-    int threadAmount = 100;
+    int threadAmount = 2000;
     bool isHostUp = false;
     bool enableFindService = false;
     bool enableTCPScan = false;

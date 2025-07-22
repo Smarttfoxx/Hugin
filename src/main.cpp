@@ -24,6 +24,7 @@
 // C++ libraries
 #include <mutex>
 #include <functional>
+#include <unistd.h>
 
 // Custom libraries
 #include "interfaces/visuals.h"
@@ -33,6 +34,11 @@
 #include "utilities/log_system.h"
 
 int main(int argc, char* argv[]) {
+
+    if (getuid() != 0) {
+        logsys.Warning("Hugin should be executed with sudo privileges.");
+        return 1;
+    }
 
     ProgramConfig config;
     std::mutex result_mutex;
