@@ -19,13 +19,16 @@
 
 ### Requirements
 
-- C++20 or later
+- C++17
 - Linux
+- OpenLDAP
+- LDNS
+- Lua
 
 ### Compilation
 
 ```bash
-g++ -std=c++20 main.cpp -o hugin -llua -ldl -lm -lpthread -lldap -llber -lldns
+make && make clean
 ```
 
 ---
