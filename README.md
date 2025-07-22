@@ -28,6 +28,8 @@
 ### Installation
 
 ```bash
+git clone https://github.com/Smarttfoxx/Hugin
+cd Hugin
 sudo make install
 ```
 
