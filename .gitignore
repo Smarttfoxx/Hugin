@@ -1,0 +1,13 @@
+# Ignore object files and compiled binaries
+*.o
+*.out
+*.exe
+*.bin
+*.elf
+
+!*/             # exclude folders from the rule above
+!.gitignore     # don't ignore the .gitignore itself
+!.clang-format  # allow config files if needed
+
+# Ignore .vscode folder (for Visual Studio Code)
+.vscode/
