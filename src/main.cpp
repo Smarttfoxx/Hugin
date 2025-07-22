@@ -125,12 +125,13 @@ int main(int argc, char* argv[]) {
         if (!config.isHostUp)
             logsys.Warning("No open ports were found, is the host online?");
 
-        // --- Service and LUA Scanning Phase ---   
+        // --- Service scanning ---   
         if ((config.enableFindService || config.enableLUA) && !(HostObject.openPorts.empty())) {
             logsys.Info("Starting service scanner on host", HostObject.ipValue);
             
             std::cout << std::left;
             std::cout << std::setw(12) << "PORT" << std::setw(8) << "STATE" << "SERVICE/VERSION\n";
+            
             for (int port : HostObject.openPorts) {
                 if (!config.enableLUA) {
                     // Adjust timeout for FTP services

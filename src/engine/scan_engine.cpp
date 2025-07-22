@@ -205,22 +205,6 @@ bool EnumerateLDAP(const std::string& host, int port) {
 }
 
 /**
- * Performs a reverse DNS lookup to get hostname
- * @param ipValue Target IP
- * @return Hostname or empty string if not found
- */
-std::string GetReverseDNS(const std::string& ipValue) {
-    sockaddr_in addr{};
-    inet_pton(AF_INET, ipValue.c_str(), &addr.sin_addr);
-    
-    char host[NI_MAXHOST];
-    if (getnameinfo((sockaddr*)&addr, sizeof(addr), host, NI_MAXHOST, nullptr, 0, 0) == 0) {
-        return std::string(host);
-    }
-    return "";
-}
-
-/**
  * TCP service probe for DNS
  */
 std::string TCPServiceProbe(const std::string& ipValue, int port) {
@@ -309,20 +293,12 @@ std::string DetectDNSService(const std::string& ipValue, int port) {
         return "DNS Service: (Resolver init failed)";
     }
 
-    ldns_resolver_push_nameserver(resolver, rdf); // fixed
+    ldns_resolver_push_nameserver(resolver, rdf);
     ldns_resolver_set_port(resolver, port);
     ldns_resolver_set_retry(resolver, 1);
 
-    struct timeval tv{2, 0};  // fixed
+    struct timeval tv{2, 0};
     ldns_resolver_set_timeout(resolver, tv);
-
-    // Get reverse DNS
-    std::string hostname = GetReverseDNS(ipValue);
-    if (!hostname.empty()) {
-        result << "DNS Service: (Hostname: " << hostname << ")";
-    } else {
-        result << "DNS Service:";
-    }
 
     // Try various version queries
     std::vector<std::pair<std::string, uint16_t>> queries = {
@@ -338,12 +314,12 @@ std::string DetectDNSService(const std::string& ipValue, int port) {
         if (!name) continue;
 
         ldns_pkt* pkt = ldns_resolver_query(resolver, name, static_cast<ldns_rr_type>(query.second),
-                                            LDNS_RR_CLASS_CH, LDNS_RD); // fixed class
+                                            LDNS_RR_CLASS_CH, LDNS_RD);
         ldns_rdf_free(name);
 
         if (!pkt) continue;
 
-        if (ldns_pkt_ancount(pkt)) {  // fixed missing ')'
+        if (ldns_pkt_ancount(pkt)) {
             ldns_rr_list* answers = ldns_pkt_answer(pkt);
             for (size_t i = 0; i < ldns_rr_list_rr_count(answers); i++) {
                 ldns_rr* rr = ldns_rr_list_rr(answers, i);
@@ -399,10 +375,6 @@ std::string DetectDNSService(const std::string& ipValue, int port) {
         } else {
             result << " " << version;
         }
-    }
-
-    if (version.find("Debian") != std::string::npos) {
-        result << "\nService Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel";
     }
 
     ldns_resolver_deep_free(resolver);

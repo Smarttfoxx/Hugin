@@ -122,13 +122,6 @@ std::string GetLocalIP(const std::string& ipValue);
 bool EnumerateLDAP(const std::string& host, int port);
 
 /**
- * Performs a reverse DNS lookup to get hostname
- * @param ipValue Target IP
- * @return Hostname or empty string if not found
- */
-std::string GetReverseDNS(const std::string& ipValue);
-
-/**
  * TCP service probe for DNS
  */
 std::string TCPServiceProbe(const std::string& ipValue, int port);
