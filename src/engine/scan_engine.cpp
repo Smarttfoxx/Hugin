@@ -112,7 +112,7 @@ std::string GetLocalIP(const std::string& ipValue) {
  * @param port The target port.
  * @param payload The NMAP payload to be sent.
  */
-void SendUDPPayload(const std::string& ipValue, int port, const std::string& payload) {
+void SendNmapUDPPayload(const std::string& ipValue, int port, const std::string& payload) {
     int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) return;
 
@@ -232,7 +232,7 @@ std::string EnumerateLDAP(const std::string& host, int port) {
 /**
  * TCP service probe for DNS
  */
-std::string TCPServiceProbe(const std::string& ipValue, int port) {
+std::string TCPDNSProbe(const std::string& ipValue, int port) {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) return "";
     
@@ -370,7 +370,7 @@ std::string DetectDNSService(const std::string& ipValue, int port) {
 
     // TCP fallback
     if (version.empty()) {
-        std::string banner = TCPServiceProbe(ipValue, port);
+        std::string banner = TCPDNSProbe(ipValue, port);
         if (!banner.empty()) {
             version = banner;
         }
@@ -415,7 +415,7 @@ std::string DetectDNSService(const std::string& ipValue, int port) {
  * @param timeoutValue Connection timeout in seconds.
  * @return Banner string or empty if none was received.
  */
-std::string ServiceBannerGrabber(const std::string& ipValue, int port, int timeoutValue) {
+std::string ServiceVersionInfo(const std::string& ipValue, int port, int timeoutValue) {
     std::string banner;
     char buffer[1024];
     auto start = std::chrono::steady_clock::now();
@@ -550,7 +550,7 @@ std::string ServiceBannerGrabber(const std::string& ipValue, int port, int timeo
  * @param timeoutValue Timeout in seconds.
  * @return True if port is open, false otherwise.
  */
-bool IsPortOpenTcp(const std::string& ipValue, int port, int timeoutValue) {
+bool PortScanTCPConnect(const std::string& ipValue, int port, int timeoutValue) {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
     if (sockfd < 0)
@@ -588,7 +588,7 @@ bool IsPortOpenTcp(const std::string& ipValue, int port, int timeoutValue) {
  * @param timeoutValue Timeout for receiving responses.
  * @return Vector of ports that responded with SYN-ACK (open).
  */
-std::vector<int> PortScanSyn(const std::string& ipValue, const std::vector<int>& ports, float timeoutValue) {
+std::vector<int> PortScanTCPSyn(const std::string& ipValue, const std::vector<int>& ports, float timeoutValue) {
     std::vector<int> open_ports;
     std::unordered_set<int> scanned_ports;
     std::unordered_map<int, int> port_map;

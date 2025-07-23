@@ -81,7 +81,6 @@ int main(int argc, char* argv[]) {
 
     logsys.Info("Using a total of", config.threadAmount, "threads for the scan.");
     auto udpPayloads = ParseNmapPayloads("/usr/share/hugin/nmap/nmap-payloads.txt");
-    auto portServiceMap = ParseNmapServices("/usr/share/hugin/nmap/nmap-services.txt", "tcp");
 
     // --- Port Scanning Phase ---
     for (HostInstance& HostObject : config.HostInstances) {
@@ -93,7 +92,7 @@ int main(int argc, char* argv[]) {
         if (config.enableTCPScan) {
             for (int port : config.portsToScan) {
                 pool.enqueue([=, &result_mutex, &scannedPortsCount, &config]() {
-                    bool isPortOpen = IsPortOpenTcp(HostObject.ipValue, port, config.portScan_timeout);
+                    bool isPortOpen = PortScanTCPConnect(HostObject.ipValue, port, config.portScan_timeout);
                     if (isPortOpen) {
                         std::lock_guard<std::mutex> lock(result_mutex);
                         pOpenPorts->push_back(port);
@@ -114,14 +113,14 @@ int main(int argc, char* argv[]) {
                 if (udpPayloads.count(port)) {
                     for (const auto& payload : udpPayloads[port]) {
                         pool.enqueue([=]() {
-                            SendUDPPayload(HostObject.ipValue, port, payload);
+                            SendNmapUDPPayload(HostObject.ipValue, port, payload);
                         });
                     }
                 }
             }
         } else {
             // TCP SYN scan (batch-based)
-            std::vector<int> openPort = PortScanSyn(HostObject.ipValue, config.portsToScan, config.portScan_timeout);
+            std::vector<int> openPort = PortScanTCPSyn(HostObject.ipValue, config.portsToScan, config.portScan_timeout);
 
             logsys.Info("Scanning", config.portsToScan.size(), "ports via SYN.");
 
@@ -141,6 +140,8 @@ int main(int argc, char* argv[]) {
 
         // --- Service scanning ---   
         if ((config.enableFindService || config.enableLUA) && !(HostObject.openPorts.empty())) {
+            auto portServiceMap = ParseNmapServices("/usr/share/hugin/nmap/nmap-services.txt", "tcp");
+            
             std::cout << "\n";
             logsys.Info("Starting service scanner on host", HostObject.ipValue);
             
@@ -160,7 +161,7 @@ int main(int argc, char* argv[]) {
                         std::string serviceVersion;
                         bool isPortOpen = true;
                         
-                        serviceVersion = ServiceBannerGrabber(HostObject.ipValue, port, config.servScan_timeout);
+                        serviceVersion = ServiceVersionInfo(HostObject.ipValue, port, config.servScan_timeout);
 
                         if (portServiceMap.count(port))
                             serviceName = portServiceMap[port];

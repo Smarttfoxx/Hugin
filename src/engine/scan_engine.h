@@ -118,7 +118,7 @@ std::string GetLocalIP(const std::string& ipValue);
  * @param port The target port.
  * @param payload The NMAP payload to be sent.
  */
-void SendUDPPayload(const std::string& ipValue, int port, const std::string& payload);
+void SendNmapUDPPayload(const std::string& ipValue, int port, const std::string& payload);
 
 /**
  * Connects to an LDAP server and attempts to enumerate the domain, site, and hostname.
@@ -132,7 +132,7 @@ std::string EnumerateLDAP(const std::string& host, int port);
 /**
  * TCP service probe for DNS
  */
-std::string TCPServiceProbe(const std::string& ipValue, int port);
+std::string TCPDNSProbe(const std::string& ipValue, int port);
 
 /**
  * Enhanced DNS Service: detection
@@ -149,7 +149,7 @@ std::string DetectDNSService(const std::string& ipValue, int port);
  * @param timeoutValue Connection timeout in seconds.
  * @return Banner string or empty if none was received.
  */
-std::string ServiceBannerGrabber(const std::string& ipValue, int port, int timeoutValue);
+std::string ServiceVersionInfo(const std::string& ipValue, int port, int timeoutValue);
 
 /**
  * Checks if a TCP port is open by attempting a full connection.
@@ -158,7 +158,7 @@ std::string ServiceBannerGrabber(const std::string& ipValue, int port, int timeo
  * @param timeoutValue Timeout in seconds.
  * @return True if port is open, false otherwise.
  */
-bool IsPortOpenTcp(const std::string& ipValue, int port, int timeoutValue);
+bool PortScanTCPConnect(const std::string& ipValue, int port, int timeoutValue);
 
 /**
  * Performs a TCP SYN scan using raw sockets and epoll for asynchronous response detection.
@@ -168,7 +168,7 @@ bool IsPortOpenTcp(const std::string& ipValue, int port, int timeoutValue);
  * @param timeoutValue Timeout for receiving responses.
  * @return Vector of ports that responded with SYN-ACK (open).
  */
-std::vector<int> PortScanSyn(const std::string& ipValue, const std::vector<int>& ports, float timeoutValue);
+std::vector<int> PortScanTCPSyn(const std::string& ipValue, const std::vector<int>& ports, float timeoutValue);
 
 /**
  * Sends an ICMP Echo Request ("ping") to determine if a host is up.
