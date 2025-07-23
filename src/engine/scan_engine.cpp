@@ -219,8 +219,6 @@ std::string EnumerateLDAP(const std::string& host, int port) {
             stream << ", Site: " << site;
         stream << ")";
 
-        //logsys.CommonText(stream.str().c_str());
-
         return stream.str().c_str();
     }
 
