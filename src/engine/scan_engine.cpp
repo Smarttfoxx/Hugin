@@ -107,14 +107,45 @@ std::string GetLocalIP(const std::string& ipValue) {
 }
 
 /**
+ * Send UDP packet to port
+ * @param ipValue The target IP address.
+ * @param port The target port.
+ * @param timeoutSecs The timeout for the scan.
+ */
+bool BasicUDPScan(const std::string& ipValue, int port, int timeoutSecs) {
+    int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sockfd < 0) return false;
+
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    inet_pton(AF_INET, ipValue.c_str(), &addr.sin_addr);
+
+    // Send an empty UDP packet
+    const char dummy = 0;
+    sendto(sockfd, &dummy, 1, 0, (sockaddr*)&addr, sizeof(addr));
+
+    // Set timeout and wait for response
+    char buffer[1024];
+    struct timeval tv = {timeoutSecs, 0};
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+    socklen_t len = sizeof(addr);
+    int bytes = recvfrom(sockfd, buffer, sizeof(buffer), 0, (sockaddr*)&addr, &len);
+
+    close(sockfd);
+    return bytes > 0;
+}
+
+/**
  * Send NMAP UDP payloads to services
  * @param ipValue The target IP address.
  * @param port The target port.
  * @param payload The NMAP payload to be sent.
  */
-void SendNmapUDPPayload(const std::string& ipValue, int port, const std::string& payload) {
+bool SendNmapUDPPayload(const std::string& ipValue, int port, const std::string& payload) {
     int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sockfd < 0) return;
+    if (sockfd < 0) return false;
 
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
@@ -128,12 +159,17 @@ void SendNmapUDPPayload(const std::string& ipValue, int port, const std::string&
     setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
     socklen_t len = sizeof(addr);
     int bytes = recvfrom(sockfd, buffer, sizeof(buffer), 0, (sockaddr*)&addr, &len);
+
     if (bytes > 0) {
         std::string resp(buffer, bytes);
-        logsys.Info("UDP port", port, "on", ipValue, "responded with:", resp);
+        logsys.NewEvent("Found open port", port, "/tcp on host", ipValue);
+        close(sockfd);
+        return true;
     }
 
     close(sockfd);
+
+    return false;
 }
 
 /**

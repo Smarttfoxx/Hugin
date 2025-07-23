@@ -108,16 +108,41 @@ int main(int argc, char* argv[]) {
 
             scannedPortsCount = 0;
 
+        // UDP port scan
         } else if (config.enableUDPScan) {
+            int totalUdpTasks = 0;
+
             for (int port : config.portsToScan) {
                 if (udpPayloads.count(port)) {
                     for (const auto& payload : udpPayloads[port]) {
-                        pool.enqueue([=]() {
-                            SendNmapUDPPayload(HostObject.ipValue, port, payload);
+                        ++totalUdpTasks;
+                        pool.enqueue([=, &result_mutex, &scannedPortsCount, &config]() {
+                            if (SendNmapUDPPayload(HostObject.ipValue, port, payload)) {
+                                std::lock_guard<std::mutex> lock(result_mutex);
+                                pOpenPorts->push_back(port);
+                                config.isHostUp = true;
+                            }
+                            ++scannedPortsCount;
                         });
                     }
+                } else {
+                    ++totalUdpTasks;
+                    pool.enqueue([=, &result_mutex, &scannedPortsCount, &config]() {
+                        if (BasicUDPScan(HostObject.ipValue, port, config.portScan_timeout)) {
+                            std::lock_guard<std::mutex> lock(result_mutex);
+                            pOpenPorts->push_back(port);
+                            config.isHostUp = true;
+                        }
+                        ++scannedPortsCount;
+                    });
                 }
             }
+
+            // Wait for all ports to be scanned
+            while (scannedPortsCount.load() < totalUdpTasks)
+                ts.SleepMilliseconds(500);
+
+            scannedPortsCount = 0;
         } else {
             // TCP SYN scan (batch-based)
             std::vector<int> openPort = PortScanTCPSyn(HostObject.ipValue, config.portsToScan, config.portScan_timeout);
