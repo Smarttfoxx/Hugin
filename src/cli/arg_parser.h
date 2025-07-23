@@ -42,6 +42,7 @@ struct ProgramConfig {
     bool isHostUp = false;
     bool enableFindService = false;
     bool enableTCPScan = false;
+    bool enableUDPScan = false;
     bool enableARPScan = false;
     bool enableLUA = false;
     std::string networkInterface;

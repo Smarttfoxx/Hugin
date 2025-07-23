@@ -106,6 +106,32 @@ std::string GetLocalIP(const std::string& ipValue) {
 
 }
 
+void SendUDPPayload(const std::string& ip, int port, const std::string& payload) {
+    int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sockfd < 0) return;
+
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    inet_pton(AF_INET, ip.c_str(), &addr.sin_addr);
+
+    sendto(sockfd, payload.data(), payload.size(), 0, (sockaddr*)&addr, sizeof(addr));
+
+    // Optionally recvfrom() and log the response
+    char buffer[1024];
+    struct timeval tv = {1, 0};
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    socklen_t len = sizeof(addr);
+    int bytes = recvfrom(sockfd, buffer, sizeof(buffer), 0, (sockaddr*)&addr, &len);
+    if (bytes > 0) {
+        std::string resp(buffer, bytes);
+        logsys.Info("UDP port", port, "on", ip, "responded with:", resp);
+    }
+
+    close(sockfd);
+}
+
+
 /**
  * Connects to an LDAP server and attempts to enumerate the domain, site, and hostname.
  * Prints results if enumeration is successful.
@@ -113,13 +139,13 @@ std::string GetLocalIP(const std::string& ipValue) {
  * @param port LDAP port (typically 389 or 636).
  * @return True if enumeration was successful, false otherwise.
  */
-bool EnumerateLDAP(const std::string& host, int port) {
+std::string EnumerateLDAP(const std::string& host, int port) {
     std::string uri = "ldap://" + host + ":" + std::to_string(port);
     LDAP* ld = nullptr;
 
     int rc = ldap_initialize(&ld, uri.c_str());
     if (rc != LDAP_SUCCESS)
-        return false;
+        return "";
 
     int version = 3;
     ldap_set_option(ld, LDAP_OPT_PROTOCOL_VERSION, &version);
@@ -127,7 +153,7 @@ bool EnumerateLDAP(const std::string& host, int port) {
     rc = ldap_simple_bind_s(ld, nullptr, nullptr);
     if (rc != LDAP_SUCCESS) {
         ldap_unbind_ext_s(ld, nullptr, nullptr);
-        return false;
+        return "";
     }
 
     LDAPMessage* result = nullptr;
@@ -135,14 +161,14 @@ bool EnumerateLDAP(const std::string& host, int port) {
     if (rc != LDAP_SUCCESS) {
         ldap_msgfree(result);
         ldap_unbind_ext_s(ld, nullptr, nullptr);
-        return false;
+        return "";
     }
 
     LDAPMessage* entry = ldap_first_entry(ld, result);
     if (!entry) {
         ldap_msgfree(result);
         ldap_unbind_ext_s(ld, nullptr, nullptr);
-        return false;
+        return "";
     }
 
     std::string domain, site, dcHost;
@@ -187,21 +213,18 @@ bool EnumerateLDAP(const std::string& host, int port) {
             domainFlat.replace(domainFlat.find("DC."), 3, "");
 
         std::stringstream stream;
-        stream << std::left 
-               << std::setw(12) << (std::to_string(port) + "/tcp")
-               << std::setw(8) << "open"
-               << "Microsoft Windows Active Directory LDAP (Domain: " << domainFlat << " " << dcHost;
+        stream << "MS Active Directory (Domain: " << domainFlat << " " << dcHost;
 
         if (!site.empty())
             stream << ", Site: " << site;
         stream << ")";
 
-        logsys.CommonText(stream.str().c_str());
+        //logsys.CommonText(stream.str().c_str());
 
-        return true;
+        return stream.str().c_str();
     }
 
-    return false;
+    return "";
 }
 
 /**
@@ -373,7 +396,7 @@ std::string DetectDNSService(const std::string& ipValue, int port) {
         } else if (version.find("Microsoft") != std::string::npos) {
             result << " Microsoft DNS";
         } else {
-            result << "DNS Service " << version;
+            result << version;
         }
     }
 
@@ -400,8 +423,9 @@ std::string ServiceBannerGrabber(const std::string& ipValue, int port, int timeo
         return DetectDNSService(ipValue, port);
     }
 
-    if (FindIn(common_ldap_ports, port))
-        EnumerateLDAP(ipValue, port);
+    if (FindIn(common_ldap_ports, port)) {
+        return EnumerateLDAP(ipValue, port);
+    }
     
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
@@ -434,12 +458,12 @@ std::string ServiceBannerGrabber(const std::string& ipValue, int port, int timeo
 
     // NetBIOS
     if (port == 139) {
-        banner = "Microsoft Windows Netbios";
+        banner = "MS Windows Netbios";
     }
 
-    // Port 445
+    // SMB
     if (port == 445) {
-        banner = "Microsoft Windows SMB Service";
+        banner = "MS Windows SMB";
     }
 
     // Web services
@@ -497,7 +521,7 @@ std::string ServiceBannerGrabber(const std::string& ipValue, int port, int timeo
 
         // Handle DCE/RPC
         if (port == 135 && (uint8_t)buffer[0] == 0x05 && buffer[1] == 0x00)
-            banner = "Microsoft Windows RPC";
+            banner = "MS Windows RPC";
 
         auto elapsed = std::chrono::steady_clock::now() - start;
         if (elapsed > std::chrono::seconds(timeoutValue))

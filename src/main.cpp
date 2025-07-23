@@ -32,6 +32,7 @@
 #include "cli/arg_parser.h"
 #include "utilities/helper_functions.h"
 #include "utilities/log_system.h"
+#include "utilities/nmap_parser.h"
 
 int main(int argc, char* argv[]) {
 
@@ -79,6 +80,8 @@ int main(int argc, char* argv[]) {
     auto scanStartTime = std::chrono::steady_clock::now();
 
     logsys.Info("Using a total of", config.threadAmount, "threads for the scan.");
+    auto udpPayloads = ParseNmapPayloads("/usr/share/hugin/nmap/nmap-payloads.txt");
+    auto portServiceMap = ParseNmapServices("/usr/share/hugin/nmap/nmap-services.txt", "tcp");
 
     // --- Port Scanning Phase ---
     for (HostInstance& HostObject : config.HostInstances) {
@@ -105,6 +108,17 @@ int main(int argc, char* argv[]) {
                 ts.SleepMilliseconds(500);
 
             scannedPortsCount = 0;
+
+        } else if (config.enableUDPScan) {
+            for (int port : config.portsToScan) {
+                if (udpPayloads.count(port)) {
+                    for (const auto& payload : udpPayloads[port]) {
+                        pool.enqueue([=]() {
+                            SendUDPPayload(HostObject.ipValue, port, payload);
+                        });
+                    }
+                }
+            }
         } else {
             // TCP SYN scan (batch-based)
             std::vector<int> openPort = PortScanSyn(HostObject.ipValue, config.portsToScan, config.portScan_timeout);
@@ -127,10 +141,12 @@ int main(int argc, char* argv[]) {
 
         // --- Service scanning ---   
         if ((config.enableFindService || config.enableLUA) && !(HostObject.openPorts.empty())) {
+            std::cout << "\n";
             logsys.Info("Starting service scanner on host", HostObject.ipValue);
             
             std::cout << std::left;
-            std::cout << std::setw(12) << "PORT" << std::setw(8) << "STATE" << "SERVICE/VERSION\n";
+            std::cout << std::setw(12) << "PORT" << std::setw(8) << "STATE" 
+                      << std::setw(20) << "SERVICE" << std::setw(8) << "VERSION\n";
             
             for (int port : HostObject.openPorts) {
                 if (!config.enableLUA) {
@@ -140,19 +156,22 @@ int main(int argc, char* argv[]) {
         
                     // Grab service banner in parallel
                     pool.enqueue([&, port]() {
-                        std::string s_service_banner;
+                        std::string serviceName = "unknown";
+                        std::string serviceVersion;
                         bool isPortOpen = true;
                         
-                        s_service_banner = ServiceBannerGrabber(HostObject.ipValue, port, config.servScan_timeout);
+                        serviceVersion = ServiceBannerGrabber(HostObject.ipValue, port, config.servScan_timeout);
 
-                        if (s_service_banner.empty())
-                            isPortOpen = false;
+                        if (portServiceMap.count(port))
+                            serviceName = portServiceMap[port];
 
                         if (isPortOpen) {
                             std::lock_guard<std::mutex> lock(result_mutex);
                             std::cout << std::setw(12) << (std::to_string(port) + "/tcp") 
                                     << std::setw(8) << "open" 
-                                    << (s_service_banner.empty() ? "No service found." : s_service_banner) 
+                                    << std::setw(20) << serviceName
+                                    << std::setw(60)
+                                    << (serviceVersion.empty() ? "No version found" : serviceVersion) 
                                     << "\n";
                         }
                         scannedServicesCount++;
@@ -178,6 +197,7 @@ int main(int argc, char* argv[]) {
     auto scanEndTime = std::chrono::steady_clock::now();
     auto scanElapsedTime = std::chrono::duration_cast<std::chrono::seconds>(scanEndTime - scanStartTime).count();
 
+    std::cout << "\n";
     logsys.Info("Scan completed in", scanElapsedTime, "seconds.");
     logsys.Info("A total of", config.portsToScan.size(), "ports were scanned.");
 

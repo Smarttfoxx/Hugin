@@ -112,6 +112,8 @@ unsigned short checksum(void* b, int len);
  */
 std::string GetLocalIP(const std::string& ipValue);
 
+void SendUDPPayload(const std::string& ip, int port, const std::string& payload);
+
 /**
  * Connects to an LDAP server and attempts to enumerate the domain, site, and hostname.
  * Prints results if enumeration is successful.
@@ -119,7 +121,7 @@ std::string GetLocalIP(const std::string& ipValue);
  * @param port LDAP port (typically 389 or 636).
  * @return True if enumeration was successful, false otherwise.
  */
-bool EnumerateLDAP(const std::string& host, int port);
+std::string EnumerateLDAP(const std::string& host, int port);
 
 /**
  * TCP service probe for DNS

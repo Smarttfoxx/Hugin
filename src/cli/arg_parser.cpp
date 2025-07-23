@@ -137,6 +137,9 @@ bool ParseArguments(int argc, char* argv[], ProgramConfig& config) {
             config.enableLUA = true;
             config.luaScripts.push_back(argv[++i]);
 
+        } else if (arg == "-U" || arg == "--udp") {
+            config.enableUDPScan = true;
+
         } else if (arg == "-h" || arg == "--help") {
             RenderHelp();
             return false;

@@ -4,7 +4,7 @@ ROOT_INSTALL_DIR := $(PREFIX)/share/hugin
 EXECUTABLE_DIR := $(PREFIX)/local/bin
 
 # Files and directories to install
-INSTALL_DIRS := wordlists payloads
+INSTALL_DIRS := wordlists nmap
 
 CXX := g++
 CXXFLAGS := -std=c++17 -Wall -Wextra -O2
@@ -15,6 +15,7 @@ SRC := \
 	src/cli/arg_parser.cpp \
 	src/engine/scan_engine.cpp \
 	src/interfaces/visuals.cpp \
+	src/utilities/nmap_parser.cpp \
 	src/utilities/helper_functions.cpp
 
 OBJ := $(SRC:.cpp=.o)
