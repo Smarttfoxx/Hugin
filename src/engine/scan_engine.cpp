@@ -106,18 +106,23 @@ std::string GetLocalIP(const std::string& ipValue) {
 
 }
 
-void SendUDPPayload(const std::string& ip, int port, const std::string& payload) {
+/**
+ * Send NMAP UDP payloads to services
+ * @param ipValue The target IP address.
+ * @param port The target port.
+ * @param payload The NMAP payload to be sent.
+ */
+void SendUDPPayload(const std::string& ipValue, int port, const std::string& payload) {
     int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) return;
 
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
-    inet_pton(AF_INET, ip.c_str(), &addr.sin_addr);
+    inet_pton(AF_INET, ipValue.c_str(), &addr.sin_addr);
 
     sendto(sockfd, payload.data(), payload.size(), 0, (sockaddr*)&addr, sizeof(addr));
 
-    // Optionally recvfrom() and log the response
     char buffer[1024];
     struct timeval tv = {1, 0};
     setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
@@ -125,12 +130,11 @@ void SendUDPPayload(const std::string& ip, int port, const std::string& payload)
     int bytes = recvfrom(sockfd, buffer, sizeof(buffer), 0, (sockaddr*)&addr, &len);
     if (bytes > 0) {
         std::string resp(buffer, bytes);
-        logsys.Info("UDP port", port, "on", ip, "responded with:", resp);
+        logsys.Info("UDP port", port, "on", ipValue, "responded with:", resp);
     }
 
     close(sockfd);
 }
-
 
 /**
  * Connects to an LDAP server and attempts to enumerate the domain, site, and hostname.

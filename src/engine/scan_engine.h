@@ -112,7 +112,13 @@ unsigned short checksum(void* b, int len);
  */
 std::string GetLocalIP(const std::string& ipValue);
 
-void SendUDPPayload(const std::string& ip, int port, const std::string& payload);
+/**
+ * Send NMAP UDP payloads to services
+ * @param ipValue The target IP address.
+ * @param port The target port.
+ * @param payload The NMAP payload to be sent.
+ */
+void SendUDPPayload(const std::string& ipValue, int port, const std::string& payload);
 
 /**
  * Connects to an LDAP server and attempts to enumerate the domain, site, and hostname.

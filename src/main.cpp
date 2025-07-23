@@ -64,7 +64,7 @@ int main(int argc, char* argv[]) {
                 logsys.Info("The host", HostObject.ipValue, "is up");
             else
                 logsys.Warning("The host is down.");
-        } else {
+        } else if (!config.isHostUp) {
             if (IsHostUpICMP(HostObject.ipValue))
                 logsys.Info("The host", HostObject.ipValue, "is up");
             else

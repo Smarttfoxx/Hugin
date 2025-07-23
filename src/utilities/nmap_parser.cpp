@@ -25,6 +25,10 @@
 #include <fstream>
 #include <regex>
 
+/**
+ * Parse the NMAP payloads from its file DB
+ * @param filePath The full path to the NMAP file containing payloads.
+ */
 std::unordered_map<int, std::vector<std::string>> ParseNmapPayloads(const std::string& filePath) {
     std::unordered_map<int, std::vector<std::string>> payloads;
     std::ifstream file(filePath);
@@ -67,6 +71,11 @@ std::unordered_map<int, std::vector<std::string>> ParseNmapPayloads(const std::s
     return payloads;
 }
 
+/**
+ * Parse the NMAP services from its file DB
+ * @param filename The full path to the NMAP file containing payloads.
+ * @param proto The protocol to be used.
+ */
 std::map<int, std::string> ParseNmapServices(const std::string& filename, const std::string& proto) {
     std::ifstream file(filename);
     std::map<int, std::string> portToService;

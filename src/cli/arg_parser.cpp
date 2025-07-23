@@ -35,6 +35,7 @@ bool ParseArguments(int argc, char* argv[], ProgramConfig& config) {
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
 
+        // Handles IPs to be scanned
         if ((arg == "-i" || arg == "--ip") && i + 1 < argc) {
             std::string IPValue = argv[++i];
             std::stringstream ss(IPValue);
@@ -46,10 +47,12 @@ bool ParseArguments(int argc, char* argv[], ProgramConfig& config) {
                 return false;
             }
 
+            // If more than one IP is entered
             if (IPValue.find(',') != std::string::npos) {
                 while (std::getline(ss, buffer, ',')) {
                     config.HostInstances.emplace_back(HostInstance{buffer});
                 }
+            // If a subnet has been entered
             } else if (IPValue.find('/') != std::string::npos) {
                 std::string ipPart;
                 std::getline(ss, ipPart, '/');
@@ -76,22 +79,25 @@ bool ParseArguments(int argc, char* argv[], ProgramConfig& config) {
                     inet_ntop(AF_INET, &addr, ipString, INET_ADDRSTRLEN);
                     config.HostInstances.emplace_back(HostInstance(std::string(ipString)));
                 }
-
+            // If the above is false
             } else {
                 config.HostInstances.emplace_back(HostInstance{IPValue});
             }
 
+        // Set ports to be scanned
         } else if ((arg == "-p" || arg == "--ports") && i + 1 < argc) {
             std::string portValue = argv[++i];
             std::stringstream ss(portValue);
             std::string buffer;
 
+            // If multiple ports have been entered
             if (portValue.find(',') != std::string::npos) {
                 while (std::getline(ss, buffer, ',')) {
                     if (!isInteger(buffer))
                         return false;
                     config.portsToScan.push_back(std::stoi(buffer));
                 }
+            // If a port range have been entered
             } else if (portValue.find('-') != std::string::npos) {
                 int start, end;
                 std::getline(ss, buffer, '-');
@@ -100,50 +106,67 @@ bool ParseArguments(int argc, char* argv[], ProgramConfig& config) {
                 end = std::stoi(buffer);
                 for (int j = start; j <= end; ++j)
                     config.portsToScan.push_back(j);
+            // If the above is false
             } else {
                 if (!isInteger(portValue))
                     return false;
                 config.portsToScan.push_back(std::stoi(portValue));
             }
 
-        } else if ((arg == "-d" || arg == "--delay") && i + 1 < argc) {
+        // Set delay for timeout within scan
+        } else if ((arg == "-d" || arg == "--delay" || arg == "--scan-delay") && i + 1 < argc) {
             config.portScan_timeout = std::stoi(argv[++i]);
 
-        } else if (arg == "-S" || arg == "--service") {
+        // Enable service/version finder
+        } else if (arg == "-S" || arg == "--service" || arg == "-sV") {
             config.enableFindService = true;
 
+        // Scan the x amount of top TCP ports
         } else if ((arg == "-Tp" || arg == "--top-ports") && i + 1 < argc) {
             int portAmount = std::stoi(argv[++i]);
             config.portsToScan.assign(common_ports_thousand.begin(), common_ports_thousand.begin() 
             + std::min(portAmount, (int)common_ports_thousand.size()));
 
+        // Scans all TCP ports
         } else if (arg == "-Ap" || arg == "--all-ports") {
             for (int j = 1; j <= 65535; ++j)
                 config.portsToScan.push_back(j);
 
-        } else if (arg == "-Ts" || arg == "--tcp-scan") {
+        // Performs full TCP scan for port discovery
+        } else if (arg == "-sT" || arg == "--tcp-scan") {
             config.enableTCPScan = true;
 
-        } else if (arg == "Ar" || arg == "--arp-scan") {
+        // Performs ARP scan
+        } else if (arg == "-Ar" || arg == "--arp-scan") {
             config.enableARPScan = true;
 
+        // Set the network interface for ARP scan
         } else if ((arg == "--interface") && i + 1 < argc) {
             config.networkInterface = argv[++i];
 
+        // Set the amount of threads
         } else if ((arg == "-Th" || arg == "--threads") && i + 1 < argc) {
             config.threadAmount = std::stoi(argv[++i]);
 
-        } else if ((arg == "-L" || arg == "--lua-script") && i + 1 < argc) {
+        // Enable LUA scripting engine
+        } else if ((arg == "-L" || arg == "--script-lua") && i + 1 < argc) {
             config.enableLUA = true;
             config.luaScripts.push_back(argv[++i]);
 
+        // Enable UDP port discovery
         } else if (arg == "-U" || arg == "--udp") {
             config.enableUDPScan = true;
 
+        // Skip host discovery
+        } else if (arg == "-Pn") {
+            config.isHostUp = true;
+
+        // Print help section
         } else if (arg == "-h" || arg == "--help") {
             RenderHelp();
             return false;
 
+        // If the argument is invalid
         } else {
             logsys.Warning("Unknown argument was entered.");
             logsys.Info("Usage: hugin -i <IP> -p <PORT(s)> <options>");

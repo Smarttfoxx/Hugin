@@ -29,5 +29,15 @@
 #include <fstream>
 #include <sstream>
 
+/**
+ * Parse the NMAP payloads from its file DB
+ * @param filePath The full path to the NMAP file containing payloads.
+ */
 std::unordered_map<int, std::vector<std::string>> ParseNmapPayloads(const std::string& filePath);
+
+/**
+ * Parse the NMAP services from its file DB
+ * @param filename The full path to the NMAP file containing payloads.
+ * @param proto The protocol to be used.
+ */
 std::map<int, std::string> ParseNmapServices(const std::string& filename, const std::string& proto);
