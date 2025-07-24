@@ -36,11 +36,41 @@ std::unordered_map<int, std::vector<std::string>> ParseNmapPayloads(const std::s
 
     std::string line;
     std::vector<int> currentPorts;
+    std::string currentPayloadHex;
+
+    auto DecodeHexPayload = [](const std::string& hexStr) {
+        std::string decoded;
+        for (size_t i = 0; i + 3 < hexStr.size(); i += 4) {
+            std::string byteStr = hexStr.substr(i + 2, 2);  // skip \x
+            char byte = static_cast<char>(std::stoi(byteStr, nullptr, 16));
+            decoded.push_back(byte);
+        }
+        return decoded;
+    };
+
     while (std::getline(file, line)) {
         line = std::regex_replace(line, std::regex("^\\s+|\\s+$"), "");  // trim
-        if (line.empty() || line[0] == '#') continue;
+        if (line.empty()) continue;
 
-        if (line.substr(0, 3) == "udp") {
+        if (line[0] == '#') {
+            // If we were collecting a payload, flush it
+            if (!currentPayloadHex.empty()) {
+                std::string decoded = DecodeHexPayload(currentPayloadHex);
+                for (int port : currentPorts)
+                    payloads[port].push_back(decoded);
+                currentPayloadHex.clear();
+            }
+            continue;
+        }
+
+        if (line.rfind("udp", 0) == 0) {
+            if (!currentPayloadHex.empty()) {
+                std::string decoded = DecodeHexPayload(currentPayloadHex);
+                for (int port : currentPorts)
+                    payloads[port].push_back(decoded);
+                currentPayloadHex.clear();
+            }
+
             currentPorts.clear();
             std::smatch match;
             if (std::regex_search(line, match, std::regex(R"(udp\s+([\d,]+))"))) {
@@ -50,22 +80,20 @@ std::unordered_map<int, std::vector<std::string>> ParseNmapPayloads(const std::s
                     currentPorts.push_back(std::stoi(portStr));
                 }
             }
+            continue;
         }
 
         std::smatch payloadMatch;
         if (std::regex_search(line, payloadMatch, std::regex(R"(((?:\\x[0-9A-Fa-f]{2})+))"))) {
-            std::string raw = payloadMatch[1];
-            std::string decoded;
-            for (size_t i = 0; i < raw.length(); i += 4) {
-                std::string byteStr = raw.substr(i + 2, 2);
-                char byte = static_cast<char>(std::stoi(byteStr, nullptr, 16));
-                decoded.push_back(byte);
-            }
-            for (int port : currentPorts) {
-                payloads[port].push_back(decoded);
-            }
+            currentPayloadHex += payloadMatch[1].str();  // concatenate
         }
+    }
 
+    // Flush final payload
+    if (!currentPayloadHex.empty()) {
+        std::string decoded = DecodeHexPayload(currentPayloadHex);
+        for (int port : currentPorts)
+            payloads[port].push_back(decoded);
     }
 
     return payloads;

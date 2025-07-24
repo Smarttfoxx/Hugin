@@ -1,7 +1,6 @@
 # Set install prefix
 PREFIX ?= /usr
 ROOT_INSTALL_DIR := $(PREFIX)/share/hugin
-ROOT_DEBUG_INSTALL_DIR := $(PREFIX)/share/hugin/debug
 EXECUTABLE_DIR := $(PREFIX)/local/bin
 
 # Files and directories to install

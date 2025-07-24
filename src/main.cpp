@@ -64,6 +64,8 @@ int main(int argc, char* argv[]) {
                 logsys.Info("The host", HostObject.ipValue, "is up");
             else
                 logsys.Warning("The host is down.");
+
+        // Fallback to default ICMP check
         } else if (!config.isHostUp) {
             if (IsHostUpICMP(HostObject.ipValue))
                 logsys.Info("The host", HostObject.ipValue, "is up");
@@ -78,9 +80,21 @@ int main(int argc, char* argv[]) {
 
     ThreadPool pool(config.threadAmount);
     auto scanStartTime = std::chrono::steady_clock::now();
+    auto NmapUdpPayloads = ParseNmapPayloads("/usr/share/hugin/nmap/nmap-payloads.txt");
+
+    #ifdef DEBUG
+    for (const auto& [port, payloads] : NmapUdpPayloads) {
+        std::cout << "Loaded payloads for UDP port " << port << ":\n";
+        for (const auto& payload : payloads) {
+            std::cout << "  -> " << std::hex;
+            for (unsigned char c : payload)
+                std::cout << "\\x" << std::setw(2) << std::setfill('0') << static_cast<int>(c);
+            std::cout << std::dec << "\n";
+        }
+    }
+    #endif
 
     logsys.Info("Using a total of", config.threadAmount, "threads for the scan.");
-    auto udpPayloads = ParseNmapPayloads("/usr/share/hugin/nmap/nmap-payloads.txt");
 
     // --- Port Scanning Phase ---
     for (HostInstance& HostObject : config.HostInstances) {
@@ -89,7 +103,9 @@ int main(int argc, char* argv[]) {
         logsys.Info("Scanning for open ports on host", HostObject.ipValue);
 
         // TCP connect scan (parallelized)
-        if (config.enableTCPScan) {
+        if (config.enableTCPConnectScan) {
+            logsys.Info("Scanning", config.portsToScan.size(), "ports via TCP Connect.");
+
             for (int port : config.portsToScan) {
                 pool.enqueue([=, &result_mutex, &scannedPortsCount, &config]() {
                     bool isPortOpen = PortScanTCPConnect(HostObject.ipValue, port, config.portScan_timeout);
@@ -113,31 +129,31 @@ int main(int argc, char* argv[]) {
             int totalUdpTasks = 0;
 
             for (int port : config.portsToScan) {
-                if (udpPayloads.count(port)) {
-                    for (const auto& payload : udpPayloads[port]) {
+                // Use NMAP UDP payloads if available
+                if (NmapUdpPayloads.count(port)) {
+                    for (const auto& payload : NmapUdpPayloads[port]) {
                         ++totalUdpTasks;
                         pool.enqueue([=, &result_mutex, &scannedPortsCount, &config]() {
-                            if (SendNmapUDPPayload(HostObject.ipValue, port, payload)) {
+                            if (SendNmapUDPPayload(HostObject.ipValue, port, payload, config.portScan_timeout)) {
                                 std::lock_guard<std::mutex> lock(result_mutex);
                                 pOpenPorts->push_back(port);
                                 config.isHostUp = true;
                             }
+
+                            #ifdef DEBUG
+                            {
+                                std::ostringstream oss;
+                                oss << "Sending payload to " << HostObject.ipValue << ":" << port << " -> ";
+                                for (unsigned char c : payload)
+                                    oss << "\\x" << std::setw(2) << std::setfill('0') << std::hex << static_cast<int>(c);
+                                oss << std::dec;
+                                std::cout << oss.str();
+                            }
+                            #endif
+
                             ++scannedPortsCount;
                         });
                     }
-                } else {
-                    ++totalUdpTasks;
-                    #ifdef DEBUG
-                    logsys.Debug("Performing default UDP scan");
-                    #endif
-                    pool.enqueue([=, &result_mutex, &scannedPortsCount, &config]() {
-                        if (BasicUDPScan(HostObject.ipValue, port, config.portScan_timeout)) {
-                            std::lock_guard<std::mutex> lock(result_mutex);
-                            pOpenPorts->push_back(port);
-                            config.isHostUp = true;
-                        }
-                        ++scannedPortsCount;
-                    });
                 }
             }
 

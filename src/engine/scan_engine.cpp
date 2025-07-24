@@ -107,43 +107,12 @@ std::string GetLocalIP(const std::string& ipValue) {
 }
 
 /**
- * Send empty UDP packet to port
- * @param ipValue The target IP address.
- * @param port The target port.
- * @param timeoutSecs The timeout for the scan.
- */
-bool BasicUDPScan(const std::string& ipValue, int port, int timeoutSecs) {
-    int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sockfd < 0) return false;
-
-    sockaddr_in addr{};
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    inet_pton(AF_INET, ipValue.c_str(), &addr.sin_addr);
-
-    // Send an empty UDP packet
-    const char dummy = 0;
-    sendto(sockfd, &dummy, 1, 0, (sockaddr*)&addr, sizeof(addr));
-
-    // Set timeout and wait for response
-    char buffer[1024];
-    struct timeval tv = {timeoutSecs, 0};
-    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-
-    socklen_t len = sizeof(addr);
-    int bytes = recvfrom(sockfd, buffer, sizeof(buffer), 0, (sockaddr*)&addr, &len);
-
-    close(sockfd);
-    return bytes > 0;
-}
-
-/**
  * Send NMAP UDP payloads to services
  * @param ipValue The target IP address.
  * @param port The target port.
  * @param payload The NMAP payload to be sent.
  */
-bool SendNmapUDPPayload(const std::string& ipValue, int port, const std::string& payload) {
+bool SendNmapUDPPayload(const std::string& ipValue, int port, const std::string& payload, int timeoutValue) {
     int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) return false;
 
@@ -154,15 +123,23 @@ bool SendNmapUDPPayload(const std::string& ipValue, int port, const std::string&
 
     sendto(sockfd, payload.data(), payload.size(), 0, (sockaddr*)&addr, sizeof(addr));
 
+    #ifdef DEBUG
+    logsys.Debug("Sending", payload.size(), "bytes to port", port);
+    #endif
+
     char buffer[1024];
-    struct timeval tv = {1, 0};
-    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    struct timeval timeout = {timeoutValue, 0};
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
     socklen_t len = sizeof(addr);
     int bytes = recvfrom(sockfd, buffer, sizeof(buffer), 0, (sockaddr*)&addr, &len);
 
+    #ifdef DEBUG
+    logsys.Debug("Received", bytes, "bytes from port", port);
+    #endif
+
     if (bytes > 0) {
         std::string resp(buffer, bytes);
-        logsys.NewEvent("Found open port", port, "/tcp on host", ipValue);
+        logsys.NewEvent("Found open port", (std::to_string(port) + "/tcp on host"), ipValue);
         close(sockfd);
         return true;
     }
@@ -606,7 +583,7 @@ bool PortScanTCPConnect(const std::string& ipValue, int port, int timeoutValue) 
     inet_pton(AF_INET, ipValue.c_str(), &addr.sin_addr);
 
     if (connect(sockfd, (sockaddr*)&addr, sizeof(addr)) == 0) {
-        logsys.NewEvent("Found open port", port, "/tcp on host", ipValue);
+        logsys.NewEvent("Found open port", (std::to_string(port) + "/tcp on host"), ipValue);
         close(sockfd);
         return true;
     }

@@ -41,7 +41,7 @@ struct ProgramConfig {
     int threadAmount = 2000;
     bool isHostUp = false;
     bool enableFindService = false;
-    bool enableTCPScan = false;
+    bool enableTCPConnectScan = false;
     bool enableUDPScan = false;
     bool enableARPScan = false;
     bool enableLUA = false;

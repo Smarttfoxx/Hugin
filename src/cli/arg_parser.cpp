@@ -134,7 +134,7 @@ bool ParseArguments(int argc, char* argv[], ProgramConfig& config) {
 
         // Performs full TCP scan for port discovery
         } else if (arg == "-sT" || arg == "--tcp-scan") {
-            config.enableTCPScan = true;
+            config.enableTCPConnectScan = true;
 
         // Performs ARP scan
         } else if (arg == "-Ar" || arg == "--arp-scan") {
