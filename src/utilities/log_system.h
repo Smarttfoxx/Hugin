@@ -24,11 +24,19 @@
 #pragma once
 
 #include <iostream>
+#include <utility>
 
 /**
  * @brief Simple logging utility to format and label output messages.
  */
 struct LogSystem {
+    template<typename... Args>
+    void Debug(const char* message, Args&&... args) {
+        std::cout << "[DEBUG] " << message;
+        ((std::cout << ' ' << std::forward<Args>(args)), ...);
+        std::cout << std::endl;
+    }
+
     template<typename... Args>
     void Error(const char* message, Args&&... args) {
         std::cout << "[ERROR] " << message;

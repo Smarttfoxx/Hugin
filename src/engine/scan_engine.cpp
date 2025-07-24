@@ -107,7 +107,7 @@ std::string GetLocalIP(const std::string& ipValue) {
 }
 
 /**
- * Send UDP packet to port
+ * Send empty UDP packet to port
  * @param ipValue The target IP address.
  * @param port The target port.
  * @param timeoutSecs The timeout for the scan.
@@ -632,7 +632,9 @@ std::vector<int> PortScanTCPSyn(const std::string& ipValue, const std::vector<in
     int raw_sock = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
 
     if (raw_sock < 0) {
+        #ifdef DEBUG
         perror("socket");
+        #endif
         return open_ports;
     }
 
@@ -646,7 +648,9 @@ std::vector<int> PortScanTCPSyn(const std::string& ipValue, const std::vector<in
     // epoll setup
     int epfd = epoll_create1(0);
     if (epfd == -1) {
+        #ifdef DEBUG
         perror("epoll_create1");
+        #endif
         close(raw_sock);
         return open_ports;
     }
@@ -656,7 +660,9 @@ std::vector<int> PortScanTCPSyn(const std::string& ipValue, const std::vector<in
     ev.data.fd = raw_sock;
 
     if (epoll_ctl(epfd, EPOLL_CTL_ADD, raw_sock, &ev) == -1) {
+        #ifdef DEBUG
         perror("epoll_ctl");
+        #endif
         close(raw_sock);
         close(epfd);
         return open_ports;
@@ -741,7 +747,9 @@ std::vector<int> PortScanTCPSyn(const std::string& ipValue, const std::vector<in
         tcph->check = checksum((unsigned short*)pseudo, sizeof(pseudo));
 
         if (sendto(raw_sock, packet, iph->tot_len, 0, (sockaddr*)&dst, sizeof(dst)) < 0) {
+            #ifdef DEBUG
             perror("sendto");
+            #endif
         }
 
         scanned_ports.insert(port);
@@ -834,7 +842,9 @@ bool IsHostUpICMP(const std::string& ipValue) {
     ssize_t sent = sendto(sockfd, packet, sizeof(packet), 0, (sockaddr*)&addr, sizeof(addr));
 
     if (sent < 0) {
+        #ifdef DEBUG
         perror("sendto");
+        #endif
         close(sockfd);
         return false;
     }
@@ -857,14 +867,18 @@ bool IsHostUpICMP(const std::string& ipValue) {
 bool IsHostUpARP(const std::string& ipValue, const std::string& interface) {
     int sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ARP));
     if (sockfd < 0) {
+        #ifdef DEBUG
         perror("socket");
+        #endif
         return false;
     }
 
     struct ifreq ifr{};
     strncpy(ifr.ifr_name, interface.c_str(), IFNAMSIZ - 1);
     if (ioctl(sockfd, SIOCGIFINDEX, &ifr) == -1) {
+        #ifdef DEBUG
         perror("SIOCGIFINDEX");
+        #endif
         close(sockfd);
         return false;
     }
@@ -872,7 +886,9 @@ bool IsHostUpARP(const std::string& ipValue, const std::string& interface) {
     int ifindex = ifr.ifr_ifindex;
 
     if (ioctl(sockfd, SIOCGIFHWADDR, &ifr) == -1) {
+        #ifdef DEBUG
         perror("SIOCGIFHWADDR");
+        #endif
         close(sockfd);
         return false;
     }
@@ -881,7 +897,9 @@ bool IsHostUpARP(const std::string& ipValue, const std::string& interface) {
     memcpy(src_mac, ifr.ifr_hwaddr.sa_data, 6);
 
     if (ioctl(sockfd, SIOCGIFADDR, &ifr) == -1) {
+        #ifdef DEBUG
         perror("SIOCGIFADDR");
+        #endif
         close(sockfd);
         return false;
     }
@@ -915,7 +933,9 @@ bool IsHostUpARP(const std::string& ipValue, const std::string& interface) {
     memset(socket_address.sll_addr, 0xff, 6); // broadcast
 
     if (sendto(sockfd, buffer, 42, 0, (sockaddr*)&socket_address, sizeof(socket_address)) < 0) {
+        #ifdef DEBUG
         perror("sendto");
+        #endif
         close(sockfd);
         return false;
     }

@@ -37,7 +37,7 @@
 int main(int argc, char* argv[]) {
 
     if (getuid() != 0) {
-        logsys.Warning("Hugin should be executed with sudo privileges.");
+        logsys.Warning("Hugin should be executed with sudo privileges. Exiting...");
         return 1;
     }
 
@@ -127,6 +127,9 @@ int main(int argc, char* argv[]) {
                     }
                 } else {
                     ++totalUdpTasks;
+                    #ifdef DEBUG
+                    logsys.Debug("Performing default UDP scan");
+                    #endif
                     pool.enqueue([=, &result_mutex, &scannedPortsCount, &config]() {
                         if (BasicUDPScan(HostObject.ipValue, port, config.portScan_timeout)) {
                             std::lock_guard<std::mutex> lock(result_mutex);

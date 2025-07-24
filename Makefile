@@ -1,6 +1,7 @@
 # Set install prefix
 PREFIX ?= /usr
 ROOT_INSTALL_DIR := $(PREFIX)/share/hugin
+ROOT_DEBUG_INSTALL_DIR := $(PREFIX)/share/hugin/debug
 EXECUTABLE_DIR := $(PREFIX)/local/bin
 
 # Files and directories to install
@@ -59,5 +60,24 @@ uninstall:
 	rm -rf "$(ROOT_INSTALL_DIR)"
 	rm -f "$(EXECUTABLE_DIR)/$(TARGET)"
 	@echo "Uninstall complete."
+
+# Debug flag adds -DDEBUG for conditional compilation
+ifeq ($(MAKECMDGOALS),debug)
+    CXXFLAGS += -DDEBUG -g
+endif
+
+# Debug target
+debug: $(TARGET)
+	@echo "Installing DEBUG version to $(ROOT_INSTALL_DIR)..."
+	mkdir -p "$(ROOT_INSTALL_DIR)"
+	install -m 755 $(TARGET) "$(EXECUTABLE_DIR)/$(TARGET)"
+	@for dir in $(INSTALL_DIRS); do \
+		if [ -d "$$dir" ]; then \
+			cp -r "$$dir" "$(ROOT_INSTALL_DIR)/"; \
+		else \
+			echo "Warning: directory $$dir not found"; \
+		fi \
+	done
+	@echo "Installation complete."
 
 .PHONY: all clean install uninstall
