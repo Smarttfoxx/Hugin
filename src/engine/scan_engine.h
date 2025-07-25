@@ -46,6 +46,7 @@ extern "C" {
 #include <iomanip>
 #include <algorithm>
 #include <cctype>
+#include <atomic>
 
 #include <netdb.h>
 #include <arpa/inet.h>
@@ -58,6 +59,7 @@ extern "C" {
 #include <net/if.h>
 #include <net/if_arp.h>
 #include <netinet/if_ether.h>
+#include <netinet/udp.h>
 
 #include <sys/socket.h>
 #include <sys/epoll.h>

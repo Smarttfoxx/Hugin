@@ -31,12 +31,12 @@ void RenderBanner() {
     |  __  || |  | || | |_ |  | |  | . ` |
     | |  | || |__| || |__| | _| |_ | |\  |
     |_|  |_| \____/  \_____||_____||_| \_|
-)" << std::endl;
 
-    logsys.CommonText("Hugin - Network Scanner v1.0");
+          Hugin - Network Scanner v1.0
+)" << std::endl;
     
     #ifdef DEBUG
-    logsys.CommonText("Hugin - Network Scanner v1.0 [DEBUG BUILD]");
+    logsys.CommonText("[DEBUG BUILD]");
     #endif
 
 }

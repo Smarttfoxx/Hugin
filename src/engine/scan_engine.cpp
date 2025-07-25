@@ -22,6 +22,7 @@
 */
 
 #include "scan_engine.h"
+#include <string>
 
 /**
  * Calculates the Internet checksum for a buffer of bytes.
@@ -139,7 +140,7 @@ bool SendNmapUDPPayload(const std::string& ipValue, int port, const std::string&
 
     if (bytes > 0) {
         std::string resp(buffer, bytes);
-        logsys.NewEvent("Found open port", (std::to_string(port) + "/tcp on host"), ipValue);
+        logsys.NewEvent("Found open port", (std::to_string(port) + "/udp on host"), ipValue);
         close(sockfd);
         return true;
     }
@@ -953,7 +954,6 @@ bool IsValidIP(const std::string& ipValue) {
 
 /**
  * Executes a Lua script with injected global variables: target_ip and target_port.
- * Useful for scripting post-scan actions like banner parsing, service detection, etc.
  * @param scriptPath Path to the Lua script.
  * @param targetIP IP address to pass to the script.
  * @param port Port number to pass to the script.
