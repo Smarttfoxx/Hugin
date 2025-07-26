@@ -22,8 +22,10 @@
 */
 
 // C++ libraries
+#include <chrono>
 #include <mutex>
 #include <functional>
+#include <thread>
 #include <unistd.h>
 
 // Custom libraries
@@ -83,13 +85,15 @@ int main(int argc, char* argv[]) {
     auto NmapUdpPayloads = ParseNmapPayloads("/usr/share/hugin/nmap/nmap-payloads.txt");
 
     #ifdef DEBUG
-    for (const auto& [port, payloads] : NmapUdpPayloads) {
-        std::cout << "Loaded payloads for UDP port " << port << ":\n";
-        for (const auto& payload : payloads) {
-            std::cout << "  -> " << std::hex;
-            for (unsigned char c : payload)
-                std::cout << "\\x" << std::setw(2) << std::setfill('0') << static_cast<int>(c);
-            std::cout << std::dec << "\n";
+    if (config.enableUDPScan) {
+        for (const auto& [port, payloads] : NmapUdpPayloads) {
+            std::cout << "Loaded payloads for UDP port " << port << ":\n";
+            for (const auto& payload : payloads) {
+                std::cout << "  -> " << std::hex;
+                for (unsigned char c : payload)
+                    std::cout << "\\x" << std::setw(2) << std::setfill('0') << static_cast<int>(c);
+                std::cout << std::dec << "\n";
+            }
         }
     }
     #endif

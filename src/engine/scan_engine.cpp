@@ -701,7 +701,7 @@ std::vector<int> PortScanTCPSyn(const std::string& ipValue, const std::vector<in
 
         iph->check = checksum((unsigned short *)packet, iph->ihl << 2);
 
-        tcph->source = htons(12345);
+        tcph->source = htons(40000 + (port % 1000));
         tcph->dest = htons(port);
         tcph->seq = htonl(0);
         tcph->ack_seq = 0;
@@ -731,11 +731,12 @@ std::vector<int> PortScanTCPSyn(const std::string& ipValue, const std::vector<in
         }
 
         scanned_ports.insert(port);
+        std::this_thread::sleep_for(std::chrono::microseconds(100));
     }
 
     auto start = std::chrono::steady_clock::now();
-    epoll_event events[64];
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    epoll_event events[512];
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     // Receive the response
     while (true) {
@@ -783,6 +784,7 @@ std::vector<int> PortScanTCPSyn(const std::string& ipValue, const std::vector<in
 
     close(epfd);
     close(raw_sock);
+
     return open_ports;
 }
 

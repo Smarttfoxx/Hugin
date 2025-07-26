@@ -99,11 +99,20 @@ bool ParseArguments(int argc, char* argv[], ProgramConfig& config) {
                 }
             // If a port range have been entered
             } else if (portValue.find('-') != std::string::npos) {
-                int start, end;
-                std::getline(ss, buffer, '-');
-                start = std::stoi(buffer);
-                std::getline(ss, buffer, '-');
-                end = std::stoi(buffer);
+                size_t dashPos = portValue.find('-');
+                std::string startStr = portValue.substr(0, dashPos);
+                std::string endStr = portValue.substr(dashPos + 1);
+                
+                if (!isInteger(startStr) || !isInteger(endStr))
+                    return false;
+
+                int start = std::stoi(startStr);
+                int end = std::stoi(endStr);
+                if (start > end || start < 1 || end > 65535) {
+                    logsys.Warning("Invalid port range specified.");
+                    return false;
+                }
+
                 for (int j = start; j <= end; ++j)
                     config.portsToScan.push_back(j);
             // If the above is false
@@ -128,7 +137,7 @@ bool ParseArguments(int argc, char* argv[], ProgramConfig& config) {
             + std::min(portAmount, (int)common_ports_thousand.size()));
 
         // Scans all TCP ports
-        } else if (arg == "-Ap" || arg == "--all-ports") {
+        } else if (arg == "-Ap" || arg == "-p-" || arg == "--all-ports") {
             for (int j = 1; j <= 65535; ++j)
                 config.portsToScan.push_back(j);
 
