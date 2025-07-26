@@ -25,7 +25,6 @@
 #include <chrono>
 #include <mutex>
 #include <functional>
-#include <thread>
 #include <unistd.h>
 
 // Custom libraries

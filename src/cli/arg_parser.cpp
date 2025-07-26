@@ -138,8 +138,7 @@ bool ParseArguments(int argc, char* argv[], ProgramConfig& config) {
 
         // Scans all TCP ports
         } else if (arg == "-Ap" || arg == "-p-" || arg == "--all-ports") {
-            for (int j = 1; j <= 65535; ++j)
-                config.portsToScan.push_back(j);
+            config.portsToScan = all_tcp_ports;
 
         // Performs full TCP scan for port discovery
         } else if (arg == "-sT" || arg == "--tcp-scan") {

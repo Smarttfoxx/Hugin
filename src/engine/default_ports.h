@@ -32,4 +32,5 @@
 inline std::vector<int> common_ports_thousand = ReadFile("/usr/share/hugin/wordlists/hugin-ports-top1000.txt");
 inline std::vector<int> common_web_ports = ReadFile("/usr/share/hugin/wordlists/hugin-ports-topweb.txt");
 inline std::vector<int> common_ftp_ports = ReadFile("/usr/share/hugin/wordlists/hugin-ports-topftp.txt");
+inline std::vector<int> all_tcp_ports = ReadFile("/usr/share/hugin/wordlists/hugin-all-ports.txt");
 inline std::vector<int> common_ldap_ports = { 389, 363, 3268, 3269 };
