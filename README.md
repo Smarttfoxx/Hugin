@@ -1,16 +1,17 @@
 # Hugin - Network Scanner
 
-**Hugin** is a high-performance, multithreaded port scanner written in C++. It supports both TCP Connect and SYN scanning modes, features ICMP host detection, optional service/banner grabbing. It is built for speed, efficiency, and flexibility, making it a powerful tool for network reconnaissance. Hugin can scan all 65535 ports in 3 seconds.
+**Hugin** is a high-performance, multithreaded port scanner written in C++. It supports TCP Connect, SYN and UDP port scanning modes, features ICMP and ARP host detection and service/version grabbing. It is built for speed, efficiency, and flexibility, making it a powerful tool for network reconnaissance. Hugin can scan all 65535 ports via TCP Connect (complete handshake) in 1 minute.
 
 ---
 
 ## Features
 
-- Scan specific ports, top common ports, or all 65535 ports
+- Scan specific ports, top common ports, port range or all 65535 ports
 - High-speed multithreaded architecture
+- Supports Nmap arguments such as -Pn, sT and -p-.
 - ICMP ping to check if a host is online before scanning
-- Optional banner grabbing to identify services on open ports
-- Raw socket support for SYN scanning (requires root access)
+- Banner grabbing to identify services on open ports
+- Raw socket support for SYN scanning
 - Scan multiple IPs and subnets at once
 
 ---
@@ -41,20 +42,17 @@ sudo make install
 # Target IP address (required)
 -i, --ip
 
-# Ports to scan (e.g., 80, 20-25, 21,22,23)
+# Ports to scan (e.g., 80, 20-25, 21,22,23 or -p- for all ports)
 -p, --ports
 
 #Scan top N common ports (e.g., -Tp 100)
 -Tp, --top-ports
 
-# Scan all 65535 TCP ports
--Ap, --all-ports
-
 # Use TCP Connect scan (default is SYN scan)
--Ts, --tcp-scan
+-Ts, --tcp-scan, -sT
 
 # Enable banner grabbing for service detection
--S, --service
+-S, --service, -sV
 
 # Timeout for port probes in seconds (default: 3)
 -d, --delay
@@ -69,10 +67,10 @@ sudo make install
 
 ```
 # Scan top 100 common ports on 192.168.1.1 using 200 threads
-sudo hugin -i 192.168.1.1 -Tp 100 -Th 200
+sudo hugin -i 192.168.1.1 -sT 100 -Th 200
 
 # Full TCP SYN scan of all 65535 ports
-sudo hugin -i 192.168.1.1 -Ap
+sudo hugin -i 192.168.1.1 -p-
 
 # TCP Connect scan with banner grabbing on selected ports
 sudo hugin -i 192.168.1.1 -p 21,22,80 -Ts -S
