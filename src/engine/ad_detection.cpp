@@ -38,6 +38,7 @@
 ADServiceDetector::ADServiceDetector(const std::string& target_ip) : target_ip_(target_ip) {}
 
 ADServiceInfo ADServiceDetector::DetectService(int port, const std::string& banner) {
+    (void)banner; // Suppress unused parameter warning
     ADServiceInfo info;
     info.confidence = 0.0;
     
@@ -81,6 +82,7 @@ ADServiceInfo ADServiceDetector::DetectService(int port, const std::string& bann
 }
 
 ADServiceInfo ADServiceDetector::DetectDNS(int port) {
+    (void)port; // Suppress unused parameter warning
     ADServiceInfo info;
     info.service_name = "domain";
     
@@ -96,6 +98,7 @@ ADServiceInfo ADServiceDetector::DetectDNS(int port) {
 }
 
 ADServiceInfo ADServiceDetector::DetectKerberos(int port) {
+    (void)port; // Suppress unused parameter warning
     ADServiceInfo info;
     info.service_name = "kerberos-sec";
     
@@ -120,6 +123,7 @@ ADServiceInfo ADServiceDetector::DetectKerberos(int port) {
 }
 
 ADServiceInfo ADServiceDetector::DetectLDAP(int port) {
+    (void)port; // Suppress unused parameter warning
     ADServiceInfo info;
     info.service_name = "ldap";
     
@@ -141,6 +145,7 @@ ADServiceInfo ADServiceDetector::DetectLDAP(int port) {
 }
 
 ADServiceInfo ADServiceDetector::DetectSMB(int port) {
+    (void)port; // Suppress unused parameter warning
     ADServiceInfo info;
     info.service_name = "microsoft-ds";
     
@@ -164,6 +169,7 @@ ADServiceInfo ADServiceDetector::DetectSMB(int port) {
 }
 
 ADServiceInfo ADServiceDetector::DetectRDP(int port) {
+    (void)port; // Suppress unused parameter warning
     ADServiceInfo info;
     info.service_name = "ms-wbt-server";
     
@@ -188,6 +194,7 @@ ADServiceInfo ADServiceDetector::DetectRDP(int port) {
 }
 
 ADServiceInfo ADServiceDetector::DetectWinRM(int port) {
+    (void)port; // Suppress unused parameter warning
     ADServiceInfo info;
     info.service_name = "http";
     info.version = "Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)";
@@ -197,6 +204,7 @@ ADServiceInfo ADServiceDetector::DetectWinRM(int port) {
 }
 
 ADServiceInfo ADServiceDetector::DetectRPC(int port) {
+    (void)port; // Suppress unused parameter warning
     ADServiceInfo info;
     info.service_name = "msrpc";
     info.version = "Microsoft Windows RPC";
@@ -205,6 +213,7 @@ ADServiceInfo ADServiceDetector::DetectRPC(int port) {
 }
 
 ADServiceInfo ADServiceDetector::DetectNetBIOS(int port) {
+    (void)port; // Suppress unused parameter warning
     ADServiceInfo info;
     info.service_name = "netbios-ssn";
     info.version = "Microsoft Windows netbios-ssn";
@@ -299,10 +308,9 @@ std::string ADServiceDetector::SendRDPProbe(int port) {
 }
 
 std::string ADServiceDetector::SendDNSQuery(int port, const std::string& query_type) {
-    // Simple DNS query for version.bind
-    std::string dns_query = 
-        "\x12\x34\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x07version\x04bind"
-        "\x00\x00\x10\x00\x03";
+    (void)query_type; // Suppress unused parameter warning
+    // Create a simple DNS query packet
+    std::string dns_query = "\x12\x34\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00";
     
     return ConnectAndSend(port, dns_query, 5);
 }

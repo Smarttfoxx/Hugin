@@ -240,6 +240,8 @@ std::string TCPDNSProbe(const std::string& ipValue, int port) {
  */
 // Simplified DNS detection without LDNS dependency
 std::string DetectDNSService(const std::string& ipValue, int port) {
+    (void)ipValue; // Suppress unused parameter warning
+    (void)port;    // Suppress unused parameter warning
     return "Simple DNS Plus";
 }
 

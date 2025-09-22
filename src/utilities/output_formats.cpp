@@ -525,6 +525,7 @@ ComplianceReporter::ComplianceReporter() {
 }
 
 void ComplianceReporter::LoadComplianceRules(Standard standard) {
+    (void)standard; // Suppress unused parameter warning
     // Rules are loaded in constructor
 }
 
@@ -718,6 +719,7 @@ VulnerabilityCorrelator::VulnerabilityCorrelator() {
 }
 
 bool VulnerabilityCorrelator::LoadVulnerabilityDatabase(const std::string& db_path) {
+    (void)db_path; // Suppress unused parameter warning
     // In a real implementation, this would load from a CVE database file
     return true;
 }

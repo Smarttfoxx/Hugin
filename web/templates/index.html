@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hugin Network Scanner</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Hugin Network Scanner</h1>
+        <p>Enterprise-grade network security scanning with Active Directory detection.</p>
+        
+        <div class="scan-form">
+            <h2>Start Scan</h2>
+            <form id="scanForm">
+                <div class="form-group">
+                    <label for="target">Target IP/Range:</label>
+                    <input type="text" id="target" name="target" placeholder="192.168.1.1 or 192.168.1.0/24" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="ports">Ports:</label>
+                    <input type="text" id="ports" name="ports" placeholder="1-1000 or 22,80,443" value="1-1000">
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="serviceDetection" name="serviceDetection" checked>
+                        Enable Service Detection (-S)
+                    </label>
+                </div>
+                
+                <button type="submit">Start Scan</button>
+            </form>
+        </div>
+        
+        <div id="results" class="results-section" style="display: none;">
+            <h2>Scan Results</h2>
+            <pre id="scanOutput"></pre>
+        </div>
+    </div>
+    
+    <script src="/static/app.js"></script>
+</body>
+</html>

@@ -81,7 +81,7 @@ bool SSLServiceDetector::IsSSLService(const std::string& response) {
     // SSL/TLS handshake record type (0x16) and version checks
     if (first_byte == 0x16) {
         // Check for SSL 3.0, TLS 1.0, 1.1, 1.2, 1.3
-        if ((second_byte == 0x03 && (third_byte >= 0x00 && third_byte <= 0x04)) ||
+        if ((second_byte == 0x03 && (third_byte <= 0x04)) ||
             (second_byte == 0x02 && third_byte == 0x00)) {
             return true;
         }
@@ -610,6 +610,7 @@ bool ServiceDetectionEngine::SendProbe(const std::string& ip, uint16_t port, con
 
 std::string ServiceDetectionEngine::DetectOperatingSystem(const std::string& ip, 
                                                         const std::vector<ServiceMatch>& services) {
+    (void)ip; // Suppress unused parameter warning
     if (!os_engine_) {
         return "Unknown";
     }
