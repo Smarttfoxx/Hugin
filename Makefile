@@ -18,6 +18,7 @@ CORE_SRC := \
 	src/engine/service_detection.cpp \
 	src/engine/ad_detection.cpp \
 	src/engine/intelligent_service_detection.cpp \
+	src/web/web_server.cpp \
 	src/interfaces/visuals.cpp \
 	src/utilities/nmap_parser.cpp \
 	src/utilities/helper_functions.cpp

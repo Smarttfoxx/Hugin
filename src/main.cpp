@@ -25,15 +25,12 @@
 #include <chrono>
 #include <mutex>
 #include <functional>
-#include <unistd.h>
-
-// Custom libraries
+#include "cli/arg_parser.h"
 #include "interfaces/visuals.h"
 #include "engine/scan_engine.h"
-#include "engine/service_detection.h"
-#include "engine/ad_detection.h"
 #include "engine/intelligent_service_detection.h"
-#include "cli/arg_parser.h"
+#include "web/web_server.h"
+#include "engine/ad_detection.h"
 #include "utilities/helper_functions.h"
 #include "utilities/log_system.h"
 #include "utilities/nmap_parser.h"
@@ -62,11 +59,22 @@ int main(int argc, char* argv[]) {
         logsys.Info("Port:", config.webPort);
         logsys.Info("SSL:", config.enableSSL ? "Enabled" : "Disabled");
         logsys.Info("Access URL:", config.enableSSL ? "https" : "http", "://localhost:" + std::to_string(config.webPort));
+        
+        // Start web server
+        WebServer webServer(config.webPort, config.enableSSL);
+        if (!webServer.start()) {
+            logsys.Error("Failed to start web server");
+            return 1;
+        }
+        
+        logsys.Info("Web interface is ready!");
         logsys.Info("Press Ctrl+C to stop the web interface");
         
-        // TODO: Start web server here
-        logsys.Warning("Web interface is not yet fully implemented");
-        logsys.Info("This feature will be available in a future release");
+        // Keep the server running
+        while (webServer.isRunning()) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+        
         return 0;
     }
 
