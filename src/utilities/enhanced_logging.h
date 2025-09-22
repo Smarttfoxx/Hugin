@@ -24,6 +24,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include <fstream>
 #include <chrono>
 #include <iomanip>
@@ -155,7 +156,7 @@ public:
 class PerformanceMonitor {
 private:
     std::chrono::steady_clock::time_point start_time_;
-    std::mutex metrics_mutex_;
+    mutable std::mutex metrics_mutex_;
     
     struct ScanMetrics {
         int total_ports_scanned = 0;
