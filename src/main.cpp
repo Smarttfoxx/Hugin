@@ -201,7 +201,7 @@ int main(int argc, char* argv[]) {
             
             std::cout << std::left;
             std::cout << std::setw(12) << "PORT" << std::setw(8) << "STATE" 
-                      << std::setw(20) << "SERVICE" << std::setw(85) << "VERSION" 
+                      << std::setw(20) << "SERVICE" << std::setw(50) << "VERSION" 
                       << "INFO\n";
             
             // Use intelligent service detection for all open ports
@@ -230,12 +230,18 @@ int main(int argc, char* argv[]) {
                         allServiceMatches.push_back(match);
                     }
                     
+                    // Calculate dynamic spacing based on VERSION length
+                    int versionWidth = std::max(50, static_cast<int>(serviceVersion.length()) + 5);
+                    
                     std::cout << std::setw(12) << (std::to_string(port) + "/tcp") 
                             << std::setw(8) << "open" 
                             << std::setw(20) << serviceName
-                            << std::setw(85) << serviceVersion
-                            << serviceInfo
-                            << "\n";
+                            << std::setw(versionWidth) << serviceVersion;
+                    
+                    if (!serviceInfo.empty()) {
+                        std::cout << serviceInfo;
+                    }
+                    std::cout << "\n";
                 } else {
                     // Fallback for ports not detected
                     std::string serviceName = "unknown";
@@ -246,7 +252,7 @@ int main(int argc, char* argv[]) {
                     std::cout << std::setw(12) << (std::to_string(port) + "/tcp") 
                             << std::setw(8) << "open" 
                             << std::setw(20) << serviceName
-                            << std::setw(85) << "N/A"
+                            << std::setw(50) << "N/A"
                             << "\n";
                 }
             }
