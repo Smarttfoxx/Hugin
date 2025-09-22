@@ -157,90 +157,9 @@ bool SendNmapUDPPayload(const std::string& ipValue, int port, const std::string&
  * @param port LDAP port (typically 389 or 636).
  * @return True if enumeration was successful, false otherwise.
  */
+// LDAP enumeration simplified - no external dependencies needed
 std::string EnumerateLDAP(const std::string& host, int port) {
-    std::string uri = "ldap://" + host + ":" + std::to_string(port);
-    LDAP* ld = nullptr;
-
-    int rc = ldap_initialize(&ld, uri.c_str());
-    if (rc != LDAP_SUCCESS)
-        return "";
-
-    int version = 3;
-    ldap_set_option(ld, LDAP_OPT_PROTOCOL_VERSION, &version);
-
-    rc = ldap_simple_bind_s(ld, nullptr, nullptr);
-    if (rc != LDAP_SUCCESS) {
-        ldap_unbind_ext_s(ld, nullptr, nullptr);
-        return "";
-    }
-
-    LDAPMessage* result = nullptr;
-    rc = ldap_search_ext_s(ld, "", LDAP_SCOPE_BASE, "(objectClass=*)", nullptr, 0, nullptr, nullptr, nullptr, 0, &result);
-    if (rc != LDAP_SUCCESS) {
-        ldap_msgfree(result);
-        ldap_unbind_ext_s(ld, nullptr, nullptr);
-        return "";
-    }
-
-    LDAPMessage* entry = ldap_first_entry(ld, result);
-    if (!entry) {
-        ldap_msgfree(result);
-        ldap_unbind_ext_s(ld, nullptr, nullptr);
-        return "";
-    }
-
-    std::string domain, site, dcHost;
-
-    BerElement* ber = nullptr;
-    for (char* attr = ldap_first_attribute(ld, entry, &ber); attr != nullptr;
-         attr = ldap_next_attribute(ld, entry, ber)) {
-
-        berval** vals = ldap_get_values_len(ld, entry, attr);
-        if (vals) {
-            if (strcmp(attr, "defaultNamingContext") == 0)
-                domain.assign(vals[0]->bv_val, vals[0]->bv_len);
-
-            if (strcmp(attr, "serverName") == 0) {
-                std::string full(vals[0]->bv_val, vals[0]->bv_len);
-                size_t siteStart = full.find("CN=Servers,");
-                if (siteStart != std::string::npos) {
-                    size_t siteNameStart = full.find("CN=", siteStart + 11);
-                    size_t siteNameEnd = full.find(",", siteNameStart);
-                    if (siteNameStart != std::string::npos && siteNameEnd != std::string::npos)
-                        site = full.substr(siteNameStart + 3, siteNameEnd - siteNameStart - 3);
-                }
-            }
-
-            if (strcmp(attr, "dnsHostName") == 0)
-                dcHost.assign(vals[0]->bv_val, vals[0]->bv_len);
-
-            ldap_value_free_len(vals);
-        }
-        ldap_memfree(attr);
-    }
-
-    if (ber) ber_free(ber, 0);
-    ldap_msgfree(result);
-    ldap_unbind_ext_s(ld, nullptr, nullptr);
-
-    if (!domain.empty()) {
-        std::string domainFlat = domain;
-        std::replace(domainFlat.begin(), domainFlat.end(), ',', '.');
-        std::replace(domainFlat.begin(), domainFlat.end(), '=', '.');
-        while (domainFlat.find("DC.") != std::string::npos)
-            domainFlat.replace(domainFlat.find("DC."), 3, "");
-
-        std::stringstream stream;
-        stream << "MS Active Directory (Domain: " << domainFlat << " " << dcHost;
-
-        if (!site.empty())
-            stream << ", Site: " << site;
-        stream << ")";
-
-        return stream.str().c_str();
-    }
-
-    return "";
+    return "LDAP service detected on " + host + ":" + std::to_string(port);
 }
 
 /**

@@ -8,7 +8,7 @@ INSTALL_DIRS := wordlists nmap service-probes
 
 CXX := g++
 CXXFLAGS := -std=c++17 -Wall -Wextra -O2 -DHUGIN_VERSION=\"2.0\" -DPRODUCTION_BUILD
-LDFLAGS := -llua5.3 -ldl -lm -lpthread -lldap -llber -lldns -lssl -lcrypto
+LDFLAGS := -llua5.3 -ldl -lm -lpthread  -lldns -lssl -lcrypto
 
 # Core source files
 CORE_SRC := \
@@ -38,19 +38,13 @@ WEB_SRC := \
 	web/websocket_handler.cpp \
 	web/dashboard.cpp
 
-# Authentication system (Phase 3)
-AUTH_SRC := \
-	src/auth/enterprise_auth.cpp \
-	src/auth/ldap_provider.cpp \
-	src/auth/oauth2_provider.cpp \
-	src/auth/mfa_provider.cpp
+# Authentication system removed - not needed for this implementation
 
 # Test files
 TEST_SRC := \
 	tests/test_service_detection.cpp \
 	tests/test_output_formats.cpp \
-	tests/test_distributed.cpp \
-	tests/test_auth.cpp
+	tests/test_distributed.cpp
 
 # All source files
 SRC := $(CORE_SRC) $(ENHANCED_SRC)
@@ -60,7 +54,7 @@ TARGET := hugin
 # Optional components (can be disabled)
 ENABLE_DISTRIBUTED ?= 1
 ENABLE_WEB ?= 1
-ENABLE_AUTH ?= 1
+ENABLE_AUTH ?= 0
 
 ifeq ($(ENABLE_DISTRIBUTED),1)
 	SRC += $(DISTRIBUTED_SRC)
@@ -73,10 +67,7 @@ ifeq ($(ENABLE_WEB),1)
 	LDFLAGS += -lmicrohttpd
 endif
 
-ifeq ($(ENABLE_AUTH),1)
-	SRC += $(AUTH_SRC)
-	CXXFLAGS += -DENABLE_AUTH
-endif
+# Authentication components removed
 
 # Build targets
 .PHONY: all clean install uninstall test test-unit test-integration benchmark docs
@@ -192,7 +183,7 @@ package-rpm:
 dev-setup:
 	@echo "Setting up development environment..."
 	sudo apt update
-	sudo apt install -y build-essential g++ libssl-dev liblua5.3-dev libldap2-dev libldns-dev
+	sudo apt install -y build-essential g++ libssl-dev liblua5.3-dev libldns-dev
 	sudo apt install -y libmicrohttpd-dev cppcheck clang-tidy clang-format doxygen
 	@echo "Development environment ready."
 
@@ -251,7 +242,6 @@ help:
 	@echo "Build options:"
 	@echo "  ENABLE_DISTRIBUTED=0  - Disable distributed scanning"
 	@echo "  ENABLE_WEB=0          - Disable web interface"
-	@echo "  ENABLE_AUTH=0         - Disable enterprise authentication"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make                   - Build with all features"

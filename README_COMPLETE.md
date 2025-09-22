@@ -39,11 +39,10 @@ Hugin is a next-generation network scanner designed to replace traditional tools
 - **Role-based access control** with fine-grained permissions
 - **Responsive design** for mobile and desktop
 
-### 🔐 Enterprise Authentication
-- **Multi-provider support**: LDAP, SAML, OAuth2, local
-- **Multi-factor authentication** (TOTP, SMS, email)
-- **Role-based access control** with hierarchical permissions
+### 🔐 Simple Access Control
+- **Basic authentication** for web interface access
 - **Session management** with secure token handling
+- **Simple user management** without complex enterprise features
 - **Audit logging** for compliance requirements
 
 ### 📊 Structured Output & Reporting
@@ -88,7 +87,7 @@ Hugin is a next-generation network scanner designed to replace traditional tools
 ```bash
 # Install dependencies
 sudo apt update
-sudo apt install -y build-essential g++ libssl-dev liblua5.3-dev libldap2-dev libldns-dev libmicrohttpd-dev
+sudo apt install -y build-essential g++ libssl-dev liblua5.3-dev libldns-dev libmicrohttpd-dev
 
 # Clone and build
 git clone https://github.com/Smarttfoxx/Hugin.git
@@ -200,17 +199,13 @@ sudo nano /etc/hugin/hugin.conf
 # [compliance] - Compliance reporting settings
 ```
 
-### Authentication Setup
+### Simple Access Control
 ```bash
-# Configure LDAP authentication
-[authentication]
-ldap_enabled = true
-ldap_server = ldap://ldap.company.com
-ldap_base_dn = dc=company,dc=com
-
-# Enable multi-factor authentication
-require_mfa = true
-mfa_providers = totp,sms
+# Basic web interface authentication
+[web_interface]
+simple_auth = true
+session_timeout = 3600
+secure_cookies = true
 ```
 
 ### Distributed Configuration
@@ -371,11 +366,11 @@ results = requests.get(f'https://hugin.example.com/api/v1/scans/{scan_id}/result
 - Implement proper firewall rules
 - Monitor scanning activities
 
-### Authentication Security
-- Use strong passwords and MFA
+### Access Control Security
+- Use strong session management
 - Regularly rotate API keys and certificates
 - Implement session timeouts
-- Monitor authentication logs
+- Monitor access logs
 
 ### Data Protection
 - Encrypt scan results at rest

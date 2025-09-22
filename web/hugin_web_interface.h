@@ -34,6 +34,8 @@
 #include "../utilities/output_formats.h"
 #include "../distributed/scan_coordinator.h"
 
+// Note: Enterprise authentication components removed - using simple auth only
+
 /**
  * Web-based management interface for Hugin network scanner
  */

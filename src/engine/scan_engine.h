@@ -66,8 +66,7 @@ extern "C" {
 #include <sys/time.h>
 #include <sys/ioctl.h>
 
-#define LDAP_DEPRECATED 1
-#include <ldap.h>
+// LDAP includes removed - using simplified detection
 
 #include <ldns/ldns.h>
 
