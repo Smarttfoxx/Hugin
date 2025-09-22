@@ -32,6 +32,7 @@
 #include "engine/scan_engine.h"
 #include "engine/service_detection.h"
 #include "engine/ad_detection.h"
+#include "engine/intelligent_service_detection.h"
 #include "cli/arg_parser.h"
 #include "utilities/helper_functions.h"
 #include "utilities/log_system.h"
@@ -191,11 +192,9 @@ int main(int argc, char* argv[]) {
         if ((config.enableFindService || config.enableLUA) && !(HostObject.openPorts.empty())) {
             auto portServiceMap = ParseNmapServices("/usr/share/hugin/nmap/nmap-services.txt", "tcp");
             
-            // Initialize the enhanced service detection engine
-            ServiceDetectionEngine serviceEngine;
-            if (!serviceEngine.Initialize()) {
-                logsys.Warning("Failed to initialize service detection engine, falling back to basic detection");
-            }
+            // Initialize the intelligent service detection engine
+            IntelligentServiceDetector intelligentDetector;
+            intelligentDetector.LoadNmapPayloads("nmap-payloads.txt");
             
             std::cout << "\n";
             logsys.Info("Starting enhanced service detection on host", HostObject.ipValue);
@@ -205,94 +204,69 @@ int main(int argc, char* argv[]) {
                       << std::setw(20) << "SERVICE" << std::setw(85) << "VERSION" 
                       << "INFO\n";
             
+            // Use intelligent service detection for all open ports
+            std::vector<uint16_t> ports_uint16;
+            for (int port : HostObject.openPorts) {
+                ports_uint16.push_back(static_cast<uint16_t>(port));
+            }
+            
+            auto serviceResults = intelligentDetector.DetectServices(HostObject.ipValue, ports_uint16, config.servScan_timeout);
+            
             // Collect all service detection results for OS fingerprinting
             std::vector<ServiceMatch> allServiceMatches;
-            std::mutex serviceMatchesMutex;
             
+            // Display results
             for (int port : HostObject.openPorts) {
-                if (!config.enableLUA) {
-                    // Adjust timeout for FTP services
-                    if (FindIn(common_ftp_ports, port))
-                        config.servScan_timeout = 12;
-        
-                    // Enhanced service detection in parallel
-                    pool.enqueue([&, port]() {
-                        std::string serviceName = "unknown";
-                        std::string serviceVersion;
-                        std::string serviceInfo;
-                        
-                        // Try AD-specific detection first for Windows services
-                        ADServiceDetector adDetector(HostObject.ipValue);
-                        ADServiceInfo adInfo = adDetector.DetectService(port);
-                        
-                        if (adInfo.confidence > 0.0f) {
-                            serviceName = adInfo.service_name;
-                            serviceVersion = adInfo.version;
-                            serviceInfo = adInfo.fqdn.empty() ? adInfo.domain_name : adInfo.fqdn;
-                            
-                            // Create ServiceMatch for OS detection
-                            ServiceMatch match;
-                            match.service_name = adInfo.service_name;
-                            match.version = adInfo.version;
-                            match.info = serviceInfo;
-                            match.confidence = adInfo.confidence;
-                            
-                            {
-                                std::lock_guard<std::mutex> lock(serviceMatchesMutex);
-                                allServiceMatches.push_back(match);
-                            }
-                        } else {
-                            // Try enhanced service detection
-                            ServiceMatch match = serviceEngine.DetectService(HostObject.ipValue, port, "tcp", config.servScan_timeout);
-                            
-                            if (match.confidence > 0.0f) {
-                                serviceName = match.service_name;
-                                serviceVersion = match.version;
-                                serviceInfo = match.info;
-                                
-                                // Store for OS detection
-                                {
-                                    std::lock_guard<std::mutex> lock(serviceMatchesMutex);
-                                    allServiceMatches.push_back(match);
-                                }
-                            } else {
-                                // Fallback to basic banner grabbing
-                                serviceVersion = ServiceVersionInfo(HostObject.ipValue, port, config.servScan_timeout);
-                                
-                                if (portServiceMap.count(port))
-                                    serviceName = portServiceMap[port];
-                            }
-                        }
-
-                        {
-                            std::lock_guard<std::mutex> lock(result_mutex);
-                            std::cout << std::setw(12) << (std::to_string(port) + "/tcp") 
-                                    << std::setw(8) << "open" 
-                                    << std::setw(20) << serviceName
-                                    << std::setw(85) << (serviceVersion.empty() ? "N/A" : serviceVersion)
-                                    << (serviceInfo.empty() ? "" : serviceInfo)
-                                    << "\n";
-                        }
-                        scannedServicesCount++;
-                    });
+                auto it = serviceResults.find(static_cast<uint16_t>(port));
+                if (it != serviceResults.end()) {
+                    const ServiceMatch& match = it->second;
+                    
+                    std::string serviceName = match.service_name.empty() ? "unknown" : match.service_name;
+                    std::string serviceVersion = match.version.empty() ? "N/A" : match.version;
+                    std::string serviceInfo = match.info;
+                    
+                    // Store for OS detection
+                    if (match.confidence > 0.0f) {
+                        allServiceMatches.push_back(match);
+                    }
+                    
+                    std::cout << std::setw(12) << (std::to_string(port) + "/tcp") 
+                            << std::setw(8) << "open" 
+                            << std::setw(20) << serviceName
+                            << std::setw(85) << serviceVersion
+                            << serviceInfo
+                            << "\n";
                 } else {
-                    // Run Lua scripts
+                    // Fallback for ports not detected
+                    std::string serviceName = "unknown";
+                    if (portServiceMap.count(port)) {
+                        serviceName = portServiceMap[port];
+                    }
+                    
+                    std::cout << std::setw(12) << (std::to_string(port) + "/tcp") 
+                            << std::setw(8) << "open" 
+                            << std::setw(20) << serviceName
+                            << std::setw(85) << "N/A"
+                            << "\n";
+                }
+            }
+
+            // Handle Lua scripts if enabled
+            if (config.enableLUA) {
+                for (int port : HostObject.openPorts) {
                     for (const std::string& script : config.luaScripts) {
                         logsys.Info("Running script", script, "on", HostObject.ipValue, "port", port);
                         RunLuaScript(script, HostObject.ipValue, port);
                     }
                 }
             }
-            // Wait for service scanning to finish
-            while (scannedServicesCount.load() < static_cast<int>(HostObject.openPorts.size()))
-                ts.SleepMilliseconds(500);
-
-            if (scannedServicesCount.load() >= static_cast<int>(HostObject.openPorts.size()))
-                scannedServicesCount = 0;
             
             // Perform OS detection based on service fingerprints
             if (!allServiceMatches.empty()) {
-                std::string detectedOS = serviceEngine.DetectOperatingSystem(HostObject.ipValue, allServiceMatches);
+                // Create a temporary service engine for OS detection
+                ServiceDetectionEngine tempEngine;
+                tempEngine.Initialize();
+                std::string detectedOS = tempEngine.DetectOperatingSystem(HostObject.ipValue, allServiceMatches);
                 if (detectedOS != "Unknown") {
                     std::cout << "\nOS Detection: " << detectedOS << "\n";
                     logsys.Info("Detected operating system:", detectedOS);
