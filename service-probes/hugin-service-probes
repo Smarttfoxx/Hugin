@@ -1,0 +1,128 @@
+# Hugin Service Detection Database
+# Format: Probe <protocol> <name> <probestring> [rarity] [ssl_capable] [ports]
+# Format: Match <service> <pattern> [version_template] [info_template] [cpe_template]
+
+# Exclude problematic ports
+Exclude 9100,T:9101-9103,U:30000-40000
+
+# HTTP Probes
+Probe TCP GetRequest q|GET / HTTP/1.0\r\n\r\n| 1 ssl 80,443,8080,8443,8000,8888,9000
+Probe TCP HTTPOptions q|OPTIONS / HTTP/1.0\r\n\r\n| 3 ssl 80,443,8080,8443
+Probe TCP HTTPPost q|POST / HTTP/1.0\r\nContent-Length: 0\r\n\r\n| 5 ssl 80,443,8080,8443
+
+# SSH Probes
+Probe TCP SSHVersionExchange q|SSH-2.0-Hugin_Scanner\r\n| 1 false 22,2222
+Probe TCP NULL q|| 1 false 22,2222
+
+# FTP Probes
+Probe TCP NULL q|| 1 false 21,2121
+Probe TCP FTPHelp q|HELP\r\n| 3 false 21,2121
+
+# SMTP Probes
+Probe TCP NULL q|| 1 ssl 25,465,587
+Probe TCP SMTPHelo q|HELO hugin.scanner\r\n| 2 ssl 25,465,587
+Probe TCP SMTPEhlo q|EHLO hugin.scanner\r\n| 2 ssl 25,465,587
+
+# DNS Probes
+Probe TCP DNSVersionBindReq q|\x00\x1e\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x07version\x04bind\x00\x00\x10\x00\x03| 3 false 53
+Probe UDP DNSStatusRequest q|\x00\x00\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00| 1 false 53
+
+# POP3 Probes
+Probe TCP NULL q|| 1 ssl 110,995
+Probe TCP POP3Capabilities q|CAPA\r\n| 3 ssl 110,995
+
+# IMAP Probes
+Probe TCP NULL q|| 1 ssl 143,993
+Probe TCP IMAPCapabilities q|A001 CAPABILITY\r\n| 3 ssl 143,993
+
+# Telnet Probes
+Probe TCP NULL q|| 1 false 23
+Probe TCP TelnetOptions q|\xff\xfb\x01\xff\xfb\x03\xff\xfc\x27| 3 false 23
+
+# SNMP Probes
+Probe UDP SNMPv1public q|\x30\x26\x02\x01\x00\x04\x06public\xa0\x19\x02\x01\x01\x02\x01\x00\x02\x01\x00\x30\x0e\x30\x0c\x06\x08\x2b\x06\x01\x02\x01\x01\x01\x00\x05\x00| 1 false 161
+
+# MySQL Probes
+Probe TCP NULL q|| 1 false 3306
+Probe TCP MySQLGreeting q|| 1 false 3306
+
+# PostgreSQL Probes
+Probe TCP NULL q|| 1 false 5432
+
+# Redis Probes
+Probe TCP RedisInfo q|INFO\r\n| 1 false 6379
+Probe TCP RedisPing q|PING\r\n| 2 false 6379
+
+# MongoDB Probes
+Probe TCP NULL q|| 1 false 27017
+
+# LDAP Probes
+Probe TCP LDAPBindReq q|\x30\x0c\x02\x01\x01\x60\x07\x02\x01\x03\x04\x00\x80\x00| 1 ssl 389,636
+
+# Match Patterns
+
+# HTTP Matches
+Match http m|^HTTP/1\.[01] \d+ .*Server: ([^\r\n]+)|s p/HTTP/ v/$1/ cpe:/a:http:http_server/
+Match http m|^HTTP/1\.[01] \d+ .*|s p/HTTP/
+Match http m|.*Apache/([0-9.]+)|s p/Apache httpd/ v/$1/ cpe:/a:apache:http_server:$1/
+Match http m|.*nginx/([0-9.]+)|s p/nginx/ v/$1/ cpe:/a:nginx:nginx:$1/
+Match http m|.*Microsoft-IIS/([0-9.]+)|s p/Microsoft IIS httpd/ v/$1/ o/Windows/ cpe:/a:microsoft:iis:$1/
+
+# SSH Matches
+Match ssh m|^SSH-([0-9.]+)-OpenSSH[_-]([0-9.]+)|s p/OpenSSH/ v/$2/ i/protocol $1/ cpe:/a:openbsd:openssh:$2/
+Match ssh m|^SSH-([0-9.]+)-([^\r\n]+)|s p/SSH/ v/$2/ i/protocol $1/
+Match ssh m|^SSH-|s p/SSH/
+
+# FTP Matches
+Match ftp m|^220.*Welcome to.*Pure-?FTPd ([0-9.]+)|s p/Pure-FTPd/ v/$1/ cpe:/a:pureftpd:pure-ftpd:$1/
+Match ftp m|^220.*vsftpd ([0-9.]+)|s p/vsftpd/ v/$1/ cpe:/a:vsftpd:vsftpd:$1/
+Match ftp m|^220.*ProFTPD ([0-9.]+)|s p/ProFTPD/ v/$1/ cpe:/a:proftpd:proftpd:$1/
+Match ftp m|^220.*FileZilla Server ([0-9.]+)|s p/FileZilla ftpd/ v/$1/ o/Windows/ cpe:/a:filezilla-project:filezilla_server:$1/
+Match ftp m|^220[- ].*|s p/FTP/
+
+# SMTP Matches
+Match smtp m|^220.*ESMTP Postfix|s p/Postfix smtpd/ cpe:/a:postfix:postfix/
+Match smtp m|^220.*ESMTP Sendmail ([0-9.]+)|s p/Sendmail/ v/$1/ cpe:/a:sendmail:sendmail:$1/
+Match smtp m|^220.*Microsoft ESMTP MAIL Service|s p/Microsoft Exchange smtpd/ o/Windows/ cpe:/a:microsoft:exchange_server/
+Match smtp m|^220[- ].*|s p/SMTP/
+
+# DNS Matches
+Match dns m|^\x00.*\x81\x80|s p/DNS/
+Match dns m|.*BIND ([0-9.]+)|s p/ISC BIND/ v/$1/ cpe:/a:isc:bind:$1/
+
+# POP3 Matches
+Match pop3 m|^\+OK.*Dovecot ([0-9.]+)|s p/Dovecot pop3d/ v/$1/ cpe:/a:dovecot:dovecot:$1/
+Match pop3 m|^\+OK.*|s p/POP3/
+
+# IMAP Matches
+Match imap m|^\* OK.*Dovecot ([0-9.]+)|s p/Dovecot imapd/ v/$1/ cpe:/a:dovecot:dovecot:$1/
+Match imap m|^\* OK.*|s p/IMAP/
+
+# MySQL Matches
+Match mysql m|.*mysql_native_password|s p/MySQL/ cpe:/a:mysql:mysql/
+Match mysql m|.*\x00\x00\x00\x0a([0-9.]+)|s p/MySQL/ v/$1/ cpe:/a:mysql:mysql:$1/
+
+# PostgreSQL Matches
+Match postgresql m|.*PostgreSQL|s p/PostgreSQL DB/ cpe:/a:postgresql:postgresql/
+
+# Redis Matches
+Match redis m|redis_version:([0-9.]+)|s p/Redis key-value store/ v/$1/ cpe:/a:redis:redis:$1/
+Match redis m|\+PONG|s p/Redis key-value store/ cpe:/a:redis:redis/
+
+# SNMP Matches
+Match snmp m|.*\x30.*\x02\x01\x00\x04\x06public|s p/SNMP/ cpe:/a:snmp:snmp/
+
+# LDAP Matches
+Match ldap m|.*\x30.*\x02\x01\x01\x61|s p/LDAP/ cpe:/a:ldap:ldap/
+
+# SSL/TLS Matches
+Match ssl m|.*\x16\x03[\x00-\x04]|s p/SSL/TLS/
+Match ssl m|.*SSL|s p/SSL/TLS/
+Match ssl m|.*TLS|s p/SSL/TLS/
+
+# Telnet Matches
+Match telnet m|.*\xff\xf[bd]|s p/Telnet/
+Match telnet m|.*login:|s p/Telnet/
+
+# Generic service matches
+Match unknown m|.*|s p/Unknown/

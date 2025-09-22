@@ -4,16 +4,17 @@ ROOT_INSTALL_DIR := $(PREFIX)/share/hugin
 EXECUTABLE_DIR := $(PREFIX)/local/bin
 
 # Files and directories to install
-INSTALL_DIRS := wordlists nmap
+INSTALL_DIRS := wordlists nmap service-probes
 
 CXX := g++
 CXXFLAGS := -std=c++17 -Wall -Wextra -O2
-LDFLAGS := -llua -ldl -lm -lpthread -lldap -llber -lldns
+LDFLAGS := -llua5.3 -ldl -lm -lpthread -lldap -llber -lldns -lssl -lcrypto
 
 SRC := \
 	src/main.cpp \
 	src/cli/arg_parser.cpp \
 	src/engine/scan_engine.cpp \
+	src/engine/service_detection.cpp \
 	src/interfaces/visuals.cpp \
 	src/utilities/nmap_parser.cpp \
 	src/utilities/helper_functions.cpp
