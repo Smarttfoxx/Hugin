@@ -7,7 +7,7 @@ After=network.target
 Type=oneshot
 User=root
 ExecStartPre=/bin/mkdir -p /var/log/hugin /var/lib/hugin
-ExecStart=/bin/bash -c 'echo "Hugin Network Scanner is installed and ready" && /usr/local/bin/hugin --version'
+ExecStart=/bin/bash -c 'echo "Hugin Network Scanner is installed and ready" && /usr/local/bin/hugin --help | head -7'
 RemainAfterExit=yes
 TimeoutStartSec=30
 
