@@ -45,6 +45,9 @@ struct ProgramConfig {
     bool enableUDPScan = false;
     bool enableARPScan = false;
     bool enableLUA = false;
+    bool enableWebInterface = false;
+    bool enableSSL = false;
+    int webPort = 8080;
     std::string networkInterface;
     std::vector<HostInstance> HostInstances;
     std::vector<int> portsToScan;

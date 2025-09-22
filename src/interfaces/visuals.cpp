@@ -56,6 +56,9 @@ void RenderHelp() {
     logsys.CommonText("  -Ap, --all-ports         Scan all 65535 TCP ports");
     logsys.CommonText("  -Ts, --tcp-scan          Use TCP connect scan instead of SYN scan");
     logsys.CommonText("  -Th, --threads <N>       Set number of threads to use (default: 100)");
+    logsys.CommonText("  --web-interface          Start web management interface");
+    logsys.CommonText("  --port <N>               Web interface port (default: 8080)");
+    logsys.CommonText("  --ssl                    Enable SSL/HTTPS for web interface");
     logsys.CommonText("  -h,  --help              Display this help message");
 
     logsys.CommonText("");
@@ -63,4 +66,5 @@ void RenderHelp() {
     logsys.CommonText("  hugin -i 192.168.1.1 -p 22,80,443 -S");
     logsys.CommonText("  hugin -i 192.168.1.1,192.168.1.2 -Tp 100 -Ts");
     logsys.CommonText("  hugin -i 10.0.0.5 -Ap -d 2 -Th 200");
+    logsys.CommonText("  hugin --web-interface --port 8443 --ssl");
 }

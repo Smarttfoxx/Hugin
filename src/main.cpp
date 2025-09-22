@@ -56,6 +56,20 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    // --- Web Interface Mode ---
+    if (config.enableWebInterface) {
+        logsys.Info("Starting Hugin Web Interface...");
+        logsys.Info("Port:", config.webPort);
+        logsys.Info("SSL:", config.enableSSL ? "Enabled" : "Disabled");
+        logsys.Info("Access URL:", config.enableSSL ? "https" : "http", "://localhost:" + std::to_string(config.webPort));
+        logsys.Info("Press Ctrl+C to stop the web interface");
+        
+        // TODO: Start web server here
+        logsys.Warning("Web interface is not yet fully implemented");
+        logsys.Info("This feature will be available in a future release");
+        return 0;
+    }
+
     // --- Host Discovery Phase ---
     for (const HostInstance& HostObject : config.HostInstances) {
         if (!IsValidIP(HostObject.ipValue)) {

@@ -169,6 +169,18 @@ bool ParseArguments(int argc, char* argv[], ProgramConfig& config) {
         } else if (arg == "-Pn") {
             config.isHostUp = true;
 
+        // Enable web interface
+        } else if (arg == "--web-interface") {
+            config.enableWebInterface = true;
+
+        // Set web interface port
+        } else if (arg == "--port" && i + 1 < argc) {
+            config.webPort = std::stoi(argv[++i]);
+
+        // Enable SSL for web interface
+        } else if (arg == "--ssl") {
+            config.enableSSL = true;
+
         // Print help section
         } else if (arg == "-h" || arg == "--help") {
             RenderHelp();
