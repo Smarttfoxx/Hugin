@@ -202,8 +202,8 @@ int main(int argc, char* argv[]) {
             
             std::cout << std::left;
             std::cout << std::setw(12) << "PORT" << std::setw(8) << "STATE" 
-                      << std::setw(20) << "SERVICE" << std::setw(60) << "VERSION" 
-                      << std::setw(25) << "INFO" << std::setw(10) << "CONF\n";
+                      << std::setw(20) << "SERVICE" << std::setw(85) << "VERSION" 
+                      << "INFO\n";
             
             // Collect all service detection results for OS fingerprinting
             std::vector<ServiceMatch> allServiceMatches;
@@ -220,7 +220,6 @@ int main(int argc, char* argv[]) {
                         std::string serviceName = "unknown";
                         std::string serviceVersion;
                         std::string serviceInfo;
-                        float confidence = 0.0f;
                         
                         // Try AD-specific detection first for Windows services
                         ADServiceDetector adDetector(HostObject.ipValue);
@@ -230,7 +229,6 @@ int main(int argc, char* argv[]) {
                             serviceName = adInfo.service_name;
                             serviceVersion = adInfo.version;
                             serviceInfo = adInfo.fqdn.empty() ? adInfo.domain_name : adInfo.fqdn;
-                            confidence = adInfo.confidence;
                             
                             // Create ServiceMatch for OS detection
                             ServiceMatch match;
@@ -251,7 +249,6 @@ int main(int argc, char* argv[]) {
                                 serviceName = match.service_name;
                                 serviceVersion = match.version;
                                 serviceInfo = match.info;
-                                confidence = match.confidence;
                                 
                                 // Store for OS detection
                                 {
@@ -264,8 +261,6 @@ int main(int argc, char* argv[]) {
                                 
                                 if (portServiceMap.count(port))
                                     serviceName = portServiceMap[port];
-                                
-                                confidence = serviceVersion.empty() ? 0.1f : 0.5f;
                             }
                         }
 
@@ -274,9 +269,8 @@ int main(int argc, char* argv[]) {
                             std::cout << std::setw(12) << (std::to_string(port) + "/tcp") 
                                     << std::setw(8) << "open" 
                                     << std::setw(20) << serviceName
-                                    << std::setw(60) << (serviceVersion.empty() ? "N/A" : serviceVersion)
-                                    << std::setw(25) << (serviceInfo.empty() ? "N/A" : serviceInfo)
-                                    << std::setw(10) << std::fixed << std::setprecision(2) << confidence
+                                    << std::setw(85) << (serviceVersion.empty() ? "N/A" : serviceVersion)
+                                    << (serviceInfo.empty() ? "" : serviceInfo)
                                     << "\n";
                         }
                         scannedServicesCount++;

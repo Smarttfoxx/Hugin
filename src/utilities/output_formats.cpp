@@ -80,22 +80,20 @@ std::string HumanReadableFormatter::FormatPortTable(const std::vector<ScanResult
     std::ostringstream oss;
     
     oss << std::left;
-    oss << std::setw(12) << "PORT" 
-        << std::setw(8) << "STATE" 
-        << std::setw(20) << "SERVICE" 
-        << std::setw(15) << "VERSION" 
-        << std::setw(30) << "INFO" 
-        << std::setw(10) << "CONF\n";
+    oss << std::setw(12) << "PORT"
+        << std::setw(8) << "STATE"
+        << std::setw(20) << "SERVICE"
+        << std::setw(25) << "VERSION"
+        << "INFO\n";
     
     oss << std::string(95, '-') << "\n";
     
     for (const auto& port : ports) {
-        oss << std::setw(12) << (std::to_string(port.port) + "/" + port.protocol)
-            << std::setw(8) << port.state
-            << std::setw(20) << (port.ssl_enabled ? "ssl/" + port.service : port.service)
-            << std::setw(15) << (port.version.empty() ? "N/A" : port.version)
-            << std::setw(30) << (port.info.empty() ? "N/A" : port.info)
-            << std::setw(10) << std::fixed << std::setprecision(2) << port.confidence
+        oss << std::setw(12) << (std::to_string(port.port) + "/tcp")
+            << std::setw(8) << "open"
+            << std::setw(20) << port.service
+            << std::setw(25) << (port.version.empty() ? "N/A" : port.version)
+            << (port.info.empty() ? "" : port.info)
             << "\n";
     }
     
@@ -154,7 +152,7 @@ std::string JSONFormatter::Format(const ScanResult& result) {
         oss << "      \"service\": \"" << EscapeJSON(port.service) << "\",\n";
         oss << "      \"version\": \"" << EscapeJSON(port.version) << "\",\n";
         oss << "      \"info\": \"" << EscapeJSON(port.info) << "\",\n";
-        oss << "      \"confidence\": " << port.confidence << ",\n";
+
         oss << "      \"ssl_enabled\": " << (port.ssl_enabled ? "true" : "false");
         
         if (port.ssl_enabled) {
@@ -268,7 +266,7 @@ std::string XMLFormatter::Format(const ScanResult& result) {
             if (!port.info.empty()) {
                 oss << " extrainfo=\"" << EscapeXML(port.info) << "\"";
             }
-            oss << " conf=\"" << static_cast<int>(port.confidence * 10) << "\"";
+
             if (port.ssl_enabled) {
                 oss << " tunnel=\"ssl\"";
             }
@@ -329,7 +327,7 @@ std::string CSVFormatter::Format(const ScanResult& result) {
     std::ostringstream oss;
     
     // Header
-    oss << "Target,Port,Protocol,State,Service,Version,Info,Confidence,SSL,SSL_Version,SSL_Cipher\n";
+    oss << "Target,Port,Protocol,State,Service,Version,Info,SSL,SSL_Version,SSL_Cipher\n";
     
     // Data rows
     for (const auto& port : result.ports) {
@@ -340,7 +338,7 @@ std::string CSVFormatter::Format(const ScanResult& result) {
         oss << EscapeCSV(port.service) << ",";
         oss << EscapeCSV(port.version) << ",";
         oss << EscapeCSV(port.info) << ",";
-        oss << port.confidence << ",";
+
         oss << (port.ssl_enabled ? "Yes" : "No") << ",";
         oss << EscapeCSV(port.ssl_version) << ",";
         oss << EscapeCSV(port.ssl_cipher) << "\n";
