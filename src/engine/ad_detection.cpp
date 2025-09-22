@@ -74,9 +74,9 @@ ADServiceInfo ADServiceDetector::DetectService(int port, const std::string& bann
         case 47001:
             return DetectWinRM(port); // WinRM over HTTP
         default:
-            // Try generic detection
+            // Not a Windows/AD service port
             info.service_name = "unknown";
-            info.confidence = 0.1;
+            info.confidence = 0.0;
             return info;
     }
 }
