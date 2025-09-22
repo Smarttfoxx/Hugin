@@ -202,8 +202,8 @@ int main(int argc, char* argv[]) {
             
             std::cout << std::left;
             std::cout << std::setw(12) << "PORT" << std::setw(8) << "STATE" 
-                      << std::setw(20) << "SERVICE" << std::setw(15) << "VERSION" 
-                      << std::setw(30) << "INFO" << std::setw(10) << "CONF\n";
+                      << std::setw(20) << "SERVICE" << std::setw(60) << "VERSION" 
+                      << std::setw(25) << "INFO" << std::setw(10) << "CONF\n";
             
             // Collect all service detection results for OS fingerprinting
             std::vector<ServiceMatch> allServiceMatches;
@@ -274,8 +274,8 @@ int main(int argc, char* argv[]) {
                             std::cout << std::setw(12) << (std::to_string(port) + "/tcp") 
                                     << std::setw(8) << "open" 
                                     << std::setw(20) << serviceName
-                                    << std::setw(15) << (serviceVersion.empty() ? "N/A" : serviceVersion)
-                                    << std::setw(30) << (serviceInfo.empty() ? "N/A" : serviceInfo)
+                                    << std::setw(60) << (serviceVersion.empty() ? "N/A" : serviceVersion)
+                                    << std::setw(25) << (serviceInfo.empty() ? "N/A" : serviceInfo)
                                     << std::setw(10) << std::fixed << std::setprecision(2) << confidence
                                     << "\n";
                         }
