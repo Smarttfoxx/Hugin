@@ -1,44 +1,18 @@
 [Unit]
-Description=Hugin Network Scanner - Enterprise Edition
+Description=Hugin Network Scanner - Installation Validation
 Documentation=https://github.com/Smarttfoxx/Hugin
-After=network.target network-online.target
-Wants=network-online.target
-ConditionPathExists=/usr/local/bin/hugin
+After=network.target
 
 [Service]
-Type=forking
-User=hugin
-Group=hugin
-ExecStartPre=/bin/mkdir -p /var/log/hugin /var/lib/hugin/results /var/run/hugin
-ExecStartPre=/bin/chown hugin:hugin /var/log/hugin /var/lib/hugin/results /var/run/hugin
-ExecStart=/usr/local/bin/hugin --daemon --config /etc/hugin/hugin.conf
-ExecReload=/bin/kill -HUP $MAINPID
-ExecStop=/bin/kill -TERM $MAINPID
-PIDFile=/var/run/hugin/hugin.pid
-Restart=always
-RestartSec=10
-TimeoutStartSec=60
-TimeoutStopSec=30
-
-# Security settings
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=/var/log/hugin /var/lib/hugin /var/run/hugin /tmp
-CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN CAP_SYS_ADMIN
-AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
-
-# Resource limits
-LimitNOFILE=65536
-LimitNPROC=4096
-MemoryMax=2G
-CPUQuota=200%
+Type=oneshot
+User=root
+ExecStartPre=/bin/mkdir -p /var/log/hugin /var/lib/hugin
+ExecStart=/bin/bash -c 'echo "Hugin Network Scanner is installed and ready" && /usr/local/bin/hugin --version'
+RemainAfterExit=yes
+TimeoutStartSec=30
 
 # Environment
-Environment=HUGIN_CONFIG_FILE=/etc/hugin/hugin.conf
-Environment=HUGIN_LOG_LEVEL=INFO
-Environment=HUGIN_DATA_DIR=/var/lib/hugin
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
 
 [Install]
 WantedBy=multi-user.target
