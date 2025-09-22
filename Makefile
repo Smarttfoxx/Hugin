@@ -67,7 +67,7 @@ endif
 ifeq ($(ENABLE_WEB),1)
 	SRC += $(WEB_SRC)
 	CXXFLAGS += -DENABLE_WEB
-	LDFLAGS += -lmicrohttpd
+	LDFLAGS += 
 endif
 
 # Authentication components removed

@@ -22,9 +22,6 @@ WebServer::WebServer(int port, bool enableSSL) : port(port), enableSSL(enableSSL
     routes["/api/scan"] = [this](const HttpRequest& req) { return handleScan(req); };
     routes["/api/results"] = [this](const HttpRequest& req) { return handleResults(req); };
     routes["/api/status"] = [this](const HttpRequest& req) { return handleStatus(req); };
-    
-    // Static file handler (catch-all)
-    routes["*"] = [this](const HttpRequest& req) { return handleStatic(req); };
 }
 
 WebServer::~WebServer() {
@@ -124,8 +121,16 @@ void WebServer::handleClient(int clientSocket) {
     if (routeIt != routes.end()) {
         response = routeIt->second(request);
     } else {
-        // Try static file handler
-        response = handleStatic(request);
+        // Check if it's a static file request (starts with /static/)
+        if (request.path.find("/static/") == 0) {
+            response = handleStatic(request);
+        } else {
+            // Default to 404 for unknown routes
+            response.statusCode = 404;
+            response.statusText = "Not Found";
+            response.headers["Content-Type"] = "text/html";
+            response.body = "<html><body><h1>404 Not Found</h1><p>The requested resource was not found.</p></body></html>";
+        }
     }
     
     // Send response
@@ -411,10 +416,12 @@ WebServer::HttpResponse WebServer::handleScan(const HttpRequest& request) {
         return response;
     }
     
-    // Parse JSON body (simplified)
+    // Parse JSON body
     std::string target = "127.0.0.1"; // Default target
+    std::string ports = "1-1000"; // Default ports
+    bool serviceDetection = false; // Default service detection
     
-    // Extract target from JSON body (basic parsing)
+    // Extract target from JSON body
     size_t targetPos = request.body.find("\"target\":");
     if (targetPos != std::string::npos) {
         size_t startQuote = request.body.find("\"", targetPos + 9);
@@ -424,18 +431,66 @@ WebServer::HttpResponse WebServer::handleScan(const HttpRequest& request) {
         }
     }
     
+    // Extract ports from JSON body
+    size_t portsPos = request.body.find("\"ports\":");
+    if (portsPos != std::string::npos) {
+        size_t startQuote = request.body.find("\"", portsPos + 8);
+        size_t endQuote = request.body.find("\"", startQuote + 1);
+        if (startQuote != std::string::npos && endQuote != std::string::npos) {
+            ports = request.body.substr(startQuote + 1, endQuote - startQuote - 1);
+        }
+    }
+    
+    // Extract serviceDetection from JSON body
+    size_t servicePos = request.body.find("\"serviceDetection\":");
+    if (servicePos != std::string::npos) {
+        size_t truePos = request.body.find("true", servicePos + 19);
+        size_t falsePos = request.body.find("false", servicePos + 19);
+        if (truePos != std::string::npos && (falsePos == std::string::npos || truePos < falsePos)) {
+            serviceDetection = true;
+        }
+    }
+    
     currentScanTarget = target;
     scanInProgress = true;
     
     // Start scan in background thread
-    std::thread scanThread([target]() {
-        // Simulate scan (in real implementation, call actual scan functions)
-        std::this_thread::sleep_for(std::chrono::seconds(3));
+    std::thread scanThread([target, ports, serviceDetection]() {
+        // Simulate scan with more realistic timing based on parameters
+        int scanDuration = 2; // Base duration
+        if (ports == "all" || ports.find("1-65535") != std::string::npos) {
+            scanDuration = 8; // Longer for full port scan
+        } else if (ports.find("1-1000") != std::string::npos) {
+            scanDuration = 4; // Medium for 1000 ports
+        }
+        
+        if (serviceDetection) {
+            scanDuration += 2; // Add time for service detection
+        }
+        
+        std::this_thread::sleep_for(std::chrono::seconds(scanDuration));
         
         ScanResult result;
         result.target = target;
         result.status = "Completed";
-        result.openPorts = {"22/tcp (ssh)", "80/tcp (http)", "443/tcp (https)"};
+        
+        // Simulate different results based on target
+        if (target == "127.0.0.1" || target == "localhost") {
+            result.openPorts = {"22/tcp (ssh)", "80/tcp (http)", "443/tcp (https)"};
+            if (serviceDetection) {
+                result.openPorts = {"22/tcp (OpenSSH 8.9)", "80/tcp (Apache httpd 2.4.52)", "443/tcp (Apache httpd 2.4.52 SSL)"};
+            }
+        } else if (target.find("192.168.") == 0) {
+            result.openPorts = {"22/tcp (ssh)", "445/tcp (microsoft-ds)"};
+            if (serviceDetection) {
+                result.openPorts = {"22/tcp (OpenSSH 7.4)", "445/tcp (Microsoft Windows SMB)"};
+            }
+        } else {
+            result.openPorts = {"80/tcp (http)", "443/tcp (https)"};
+            if (serviceDetection) {
+                result.openPorts = {"80/tcp (nginx 1.18.0)", "443/tcp (nginx 1.18.0 SSL)"};
+            }
+        }
         
         auto now = std::chrono::system_clock::now();
         auto time_t = std::chrono::system_clock::to_time_t(now);
@@ -445,6 +500,8 @@ WebServer::HttpResponse WebServer::handleScan(const HttpRequest& request) {
         
         scanResults.push_back(result);
         scanInProgress = false;
+        
+        logsys.Info("Scan completed for target:", target, "Ports:", ports, "Service Detection:", serviceDetection ? "enabled" : "disabled");
     });
     scanThread.detach();
     
@@ -489,7 +546,10 @@ WebServer::HttpResponse WebServer::handleStatus(const HttpRequest& request) {
     std::ostringstream json;
     json << R"({"scanning": )" << (scanInProgress ? "true" : "false");
     if (scanInProgress) {
-        json << R"(, "target": ")" << currentScanTarget << "\"";
+        json << R"(, "target": ")" << currentScanTarget << R"(")";
+        json << R"(, "message": "Scan in progress...")";
+    } else {
+        json << R"(, "message": "No scan running")";
     }
     json << "}";
     
@@ -500,17 +560,25 @@ WebServer::HttpResponse WebServer::handleStatus(const HttpRequest& request) {
 WebServer::HttpResponse WebServer::handleStatic(const HttpRequest& request) {
     HttpResponse response;
     
-    std::string filePath = "/usr/share/hugin/web/static" + request.path;
+    // Remove /static prefix from path to get the actual file name
+    std::string relativePath = request.path;
+    if (relativePath.find("/static/") == 0) {
+        relativePath = relativePath.substr(7); // Remove "/static" prefix
+    }
+    
+    std::string filePath = "/usr/share/hugin/web/static" + relativePath;
     std::string content = readFile(filePath);
     
     if (content.empty()) {
         response.statusCode = 404;
         response.statusText = "Not Found";
         response.headers["Content-Type"] = "text/html";
-        response.body = "<html><body><h1>404 Not Found</h1></body></html>";
+        response.body = "<html><body><h1>404 Not Found</h1><p>Static file not found: " + request.path + "</p></body></html>";
+        logsys.Warning("Static file not found:", filePath);
     } else {
-        response.headers["Content-Type"] = getContentType(request.path);
+        response.headers["Content-Type"] = getContentType(relativePath);
         response.body = content;
+        logsys.Debug("Served static file:", filePath, "Size:", content.length());
     }
     
     return response;
