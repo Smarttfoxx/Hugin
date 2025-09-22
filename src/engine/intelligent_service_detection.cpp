@@ -562,15 +562,63 @@ bool IntelligentServiceDetector::LoadNmapPayloads(const std::string& payloads_fi
     }
     
     std::string line;
+    std::string current_payload_block = "";
+    bool in_multiline_payload = false;
+    int parsed_count = 0;
+    int skipped_count = 0;
+    
     while (std::getline(file, line)) {
+        // Skip empty lines and comments
         if (line.empty() || line[0] == '#') continue;
         
-        if (!ParseNmapPayloadLine(line)) {
-            logsys.Warning("Failed to parse payload line", line);
+        // Check if this is a continuation line (starts with spaces/tabs and contains quotes or hex)
+        if ((line[0] == ' ' || line[0] == '\t') && (line.find('"') != std::string::npos || line.find("\\x") != std::string::npos)) {
+            if (in_multiline_payload) {
+                current_payload_block += " " + line;
+                continue;
+            } else {
+                // Skip orphaned continuation lines
+                skipped_count++;
+                continue;
+            }
+        }
+        
+        // If we were in a multiline payload, try to parse the complete block
+        if (in_multiline_payload && !current_payload_block.empty()) {
+            if (ParseNmapPayloadLine(current_payload_block)) {
+                parsed_count++;
+            } else {
+                skipped_count++;
+            }
+            current_payload_block = "";
+            in_multiline_payload = false;
+        }
+        
+        // Check if this line starts a new payload definition
+        if (line.find("tcp ") == 0 || line.find("udp ") == 0) {
+            current_payload_block = line;
+            in_multiline_payload = true;
+            continue;
+        }
+        
+        // Try to parse single-line payloads
+        if (ParseNmapPayloadLine(line)) {
+            parsed_count++;
+        } else {
+            skipped_count++;
         }
     }
     
-    logsys.Info("Loaded nmap payloads from", payloads_file);
+    // Handle any remaining multiline payload
+    if (in_multiline_payload && !current_payload_block.empty()) {
+        if (ParseNmapPayloadLine(current_payload_block)) {
+            parsed_count++;
+        } else {
+            skipped_count++;
+        }
+    }
+    
+    logsys.Info("Loaded nmap payloads from", payloads_file, "- Parsed:", parsed_count, "Skipped:", skipped_count);
     return true;
 }
 
