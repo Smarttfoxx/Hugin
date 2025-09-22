@@ -23,12 +23,7 @@
 
 #pragma once
 
-// Support for lua scripting
-extern "C" {
-#include <lua5.3/lua.h>
-#include <lua5.3/lualib.h>
-#include <lua5.3/lauxlib.h>
-}
+// Lua scripting support removed for portability
 
 // C++ libraries
 #include <vector>
@@ -68,7 +63,7 @@ extern "C" {
 
 // LDAP includes removed - using simplified detection
 
-#include <ldns/ldns.h>
+// LDNS include removed for portability
 
 // Custom libraries
 #include "../utilities/helper_functions.h"

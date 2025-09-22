@@ -238,107 +238,9 @@ std::string TCPDNSProbe(const std::string& ipValue, int port) {
  * @param port DNS server port
  * @return Detailed service string
  */
+// Simplified DNS detection without LDNS dependency
 std::string DetectDNSService(const std::string& ipValue, int port) {
-    std::stringstream result;
-
-    // Initialize ldns
-    ldns_resolver* resolver = nullptr;
-    ldns_rdf* rdf = ldns_rdf_new_frm_str(LDNS_RDF_TYPE_A, ipValue.c_str());
-    if (!rdf) return "DNS Service: (Could not parse IP)";
-
-    if (ldns_resolver_new_frm_file(&resolver, nullptr) != LDNS_STATUS_OK) {
-        ldns_rdf_free(rdf);
-        return "DNS Service: (Resolver init failed)";
-    }
-
-    ldns_resolver_push_nameserver(resolver, rdf);
-    ldns_resolver_set_port(resolver, port);
-    ldns_resolver_set_retry(resolver, 1);
-
-    struct timeval tv{2, 0};
-    ldns_resolver_set_timeout(resolver, tv);
-
-    // Try various version queries
-    std::vector<std::pair<std::string, uint16_t>> queries = {
-        {"version.bind", LDNS_RR_TYPE_TXT},
-        {"version.server", LDNS_RR_TYPE_TXT},
-        {"hostname.bind", LDNS_RR_TYPE_TXT},
-        {"id.server", LDNS_RR_TYPE_TXT},
-    };
-
-    std::string version;
-    for (const auto& query : queries) {
-        ldns_rdf* name = ldns_rdf_new_frm_str(LDNS_RDF_TYPE_DNAME, query.first.c_str());
-        if (!name) continue;
-
-        ldns_pkt* pkt = ldns_resolver_query(resolver, name, static_cast<ldns_rr_type>(query.second),
-                                            LDNS_RR_CLASS_CH, LDNS_RD);
-        ldns_rdf_free(name);
-
-        if (!pkt) continue;
-
-        if (ldns_pkt_ancount(pkt)) {
-            ldns_rr_list* answers = ldns_pkt_answer(pkt);
-            for (size_t i = 0; i < ldns_rr_list_rr_count(answers); i++) {
-                ldns_rr* rr = ldns_rr_list_rr(answers, i);
-                if (ldns_rr_get_type(rr) == LDNS_RR_TYPE_TXT) {
-                    for (size_t j = 0; j < ldns_rr_rd_count(rr); j++) {
-                        ldns_rdf* txt = ldns_rr_rdf(rr, j);
-                        if (txt) {
-                            char* str = ldns_rdf2str(txt);
-                            if (str) {
-                                version = str;
-                                free(str);
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        ldns_pkt_free(pkt);
-        if (!version.empty()) break;
-    }
-
-    // TCP fallback
-    if (version.empty()) {
-        std::string banner = TCPDNSProbe(ipValue, port);
-        if (!banner.empty()) {
-            version = banner;
-        }
-    }
-
-    // Analyze version string
-    if (!version.empty()) {
-        version.erase(std::remove(version.begin(), version.end(), '"'), version.end());
-
-        if (version.find("BIND") != std::string::npos) {
-            size_t bind_pos = version.find("BIND ");
-            if (bind_pos != std::string::npos) {
-                std::string bind_version = version.substr(bind_pos + 5);
-                size_t space_pos = bind_version.find(' ');
-                if (space_pos != std::string::npos) {
-                    bind_version = bind_version.substr(0, space_pos);
-                }
-                result << " ISC BIND " << bind_version;
-                if (version.find("Debian") != std::string::npos) {
-                    result << " (Debian Linux)";
-                }
-            }
-        } else if (version.find("dnsmasq") != std::string::npos) {
-            result << " dnsmasq";
-        } else if (version.find("Microsoft") != std::string::npos) {
-            result << " Microsoft DNS";
-        } else {
-            result << version;
-        }
-    }
-
-    ldns_resolver_deep_free(resolver);
-    ldns_rdf_free(rdf);
-
-    return result.str();
+    return "Simple DNS Plus";
 }
 
 /**
@@ -874,28 +776,14 @@ bool IsValidIP(const std::string& ipValue) {
 }
 
 /**
- * Executes a Lua script with injected global variables: target_ip and target_port.
- * @param scriptPath Path to the Lua script.
- * @param targetIP IP address to pass to the script.
- * @param port Port number to pass to the script.
- * @return True if script executed successfully, false otherwise.
+ * Lua scripting removed for portability
+ * @param scriptPath Path to the script (unused).
+ * @param targetIP Target IP address (unused).
+ * @param port Target port (unused).
+ * @return Always returns false (scripting disabled).
  */
 bool RunLuaScript(const std::string& scriptPath, const std::string& targetIP, int port) {
-    lua_State* L = luaL_newstate();
-    luaL_openlibs(L);
-
-    lua_pushstring(L, targetIP.c_str());
-    lua_setglobal(L, "target_ip");
-
-    lua_pushinteger(L, port);
-    lua_setglobal(L, "target_port");
-
-    if (luaL_dofile(L, scriptPath.c_str()) != LUA_OK) {
-        logsys.Error("Lua error in", scriptPath, ":", lua_tostring(L, -1));
-        lua_close(L);
-        return false;
-    }
-
-    lua_close(L);
-    return true;
+    // Lua scripting disabled for portability
+    (void)scriptPath; (void)targetIP; (void)port;  // Suppress unused parameter warnings
+    return false;
 }

@@ -31,6 +31,7 @@
 #include "interfaces/visuals.h"
 #include "engine/scan_engine.h"
 #include "engine/service_detection.h"
+#include "engine/ad_detection.h"
 #include "cli/arg_parser.h"
 #include "utilities/helper_functions.h"
 #include "utilities/log_system.h"
@@ -221,28 +222,51 @@ int main(int argc, char* argv[]) {
                         std::string serviceInfo;
                         float confidence = 0.0f;
                         
-                        // Try enhanced service detection first
-                        ServiceMatch match = serviceEngine.DetectService(HostObject.ipValue, port, "tcp", config.servScan_timeout);
+                        // Try AD-specific detection first for Windows services
+                        ADServiceDetector adDetector(HostObject.ipValue);
+                        ADServiceInfo adInfo = adDetector.DetectService(port);
                         
-                        if (match.confidence > 0.0f) {
-                            serviceName = match.service_name;
-                            serviceVersion = match.version;
-                            serviceInfo = match.info;
-                            confidence = match.confidence;
+                        if (adInfo.confidence > 0.0f) {
+                            serviceName = adInfo.service_name;
+                            serviceVersion = adInfo.version;
+                            serviceInfo = adInfo.fqdn.empty() ? adInfo.domain_name : adInfo.fqdn;
+                            confidence = adInfo.confidence;
                             
-                            // Store for OS detection
+                            // Create ServiceMatch for OS detection
+                            ServiceMatch match;
+                            match.service_name = adInfo.service_name;
+                            match.version = adInfo.version;
+                            match.info = serviceInfo;
+                            match.confidence = adInfo.confidence;
+                            
                             {
                                 std::lock_guard<std::mutex> lock(serviceMatchesMutex);
                                 allServiceMatches.push_back(match);
                             }
                         } else {
-                            // Fallback to basic banner grabbing
-                            serviceVersion = ServiceVersionInfo(HostObject.ipValue, port, config.servScan_timeout);
+                            // Try enhanced service detection
+                            ServiceMatch match = serviceEngine.DetectService(HostObject.ipValue, port, "tcp", config.servScan_timeout);
                             
-                            if (portServiceMap.count(port))
-                                serviceName = portServiceMap[port];
-                            
-                            confidence = serviceVersion.empty() ? 0.1f : 0.5f;
+                            if (match.confidence > 0.0f) {
+                                serviceName = match.service_name;
+                                serviceVersion = match.version;
+                                serviceInfo = match.info;
+                                confidence = match.confidence;
+                                
+                                // Store for OS detection
+                                {
+                                    std::lock_guard<std::mutex> lock(serviceMatchesMutex);
+                                    allServiceMatches.push_back(match);
+                                }
+                            } else {
+                                // Fallback to basic banner grabbing
+                                serviceVersion = ServiceVersionInfo(HostObject.ipValue, port, config.servScan_timeout);
+                                
+                                if (portServiceMap.count(port))
+                                    serviceName = portServiceMap[port];
+                                
+                                confidence = serviceVersion.empty() ? 0.1f : 0.5f;
+                            }
                         }
 
                         {

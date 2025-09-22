@@ -8,7 +8,7 @@ INSTALL_DIRS := wordlists nmap service-probes
 
 CXX := g++
 CXXFLAGS := -std=c++17 -Wall -Wextra -O2 -DHUGIN_VERSION=\"2.0\" -DPRODUCTION_BUILD
-LDFLAGS := -llua5.3 -ldl -lm -lpthread  -lldns -lssl -lcrypto
+LDFLAGS := -ldl -lm -lpthread -lssl -lcrypto
 
 # Core source files
 CORE_SRC := \
@@ -16,6 +16,7 @@ CORE_SRC := \
 	src/cli/arg_parser.cpp \
 	src/engine/scan_engine.cpp \
 	src/engine/service_detection.cpp \
+	src/engine/ad_detection.cpp \
 	src/interfaces/visuals.cpp \
 	src/utilities/nmap_parser.cpp \
 	src/utilities/helper_functions.cpp
