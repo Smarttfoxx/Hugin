@@ -1024,146 +1024,76 @@ bool RunLuaScript(const std::string& scriptPath, const std::string& targetIP, in
  */
 std::string DetectKerberosService(const std::string& ipValue, int port) {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0) return "kerberos-sec";
-    
+    if (sockfd < 0) return "Microsoft Windows Kerberos";
+
     struct timeval timeout;
     timeout.tv_sec = 5;
     timeout.tv_usec = 0;
     setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
     setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
-    
+
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
     inet_pton(AF_INET, ipValue.c_str(), &addr.sin_addr);
-    
+
     if (connect(sockfd, (sockaddr*)&addr, sizeof(addr)) != 0) {
         close(sockfd);
-        return "kerberos-sec";
+        return "Microsoft Windows Kerberos";
     }
-    
+
     // Minimal AS-REQ to trigger KRB-ERROR with server time
-    // This intentionally uses invalid credentials to get a KRB-ERROR response
     uint8_t kerberos_as_req[] = {
-        // TCP length prefix (2 bytes)
-        0x00, 0x4E,
-        // KRB-AS-REQ [APPLICATION 10]
-        0x6A, 0x4C,
-        // SEQUENCE
-        0x30, 0x4A,
-        // pvno [1] INTEGER (5)
+        0x00, 0x4E, 0x6A, 0x4C, 0x30, 0x4A,
         0xA1, 0x03, 0x02, 0x01, 0x05,
-        // msg-type [2] INTEGER (AS-REQ = 10)  
         0xA2, 0x03, 0x02, 0x01, 0x0A,
-        // req-body [4] KDC-REQ-BODY
-        0xA4, 0x3E,
-        0x30, 0x3C,
-        // kdc-options [0] KDCOptions (empty)
+        0xA4, 0x3E, 0x30, 0x3C,
         0xA0, 0x03, 0x03, 0x01, 0x00,
-        // cname [1] PrincipalName (test user)
-        0xA1, 0x0E,
-        0x30, 0x0C,
-        0xA0, 0x03, 0x02, 0x01, 0x01,  // name-type = NT-PRINCIPAL
-        0xA1, 0x05, 0x30, 0x03, 0x1B, 0x01, 0x74,  // "t"
-        // realm [2] Realm
-        0xA2, 0x0B,
-        0x1B, 0x09, 'T', 'E', 'S', 'T', '.', 'L', 'O', 'C', 'A', 'L',
-        // sname [3] PrincipalName (krbtgt)
-        0xA3, 0x16,
-        0x30, 0x14,
-        0xA0, 0x03, 0x02, 0x01, 0x02,  // name-type = NT-SRV-INST
+        0xA1, 0x0E, 0x30, 0x0C,
+        0xA0, 0x03, 0x02, 0x01, 0x01,
+        0xA1, 0x05, 0x30, 0x03, 0x1B, 0x01, 0x74,
+        0xA2, 0x0B, 0x1B, 0x09, 'T','E','S','T','.','L','O','C','A','L',
+        0xA3, 0x16, 0x30, 0x14,
+        0xA0, 0x03, 0x02, 0x01, 0x02,
         0xA1, 0x0D, 0x30, 0x0B,
-        0x1B, 0x06, 'k', 'r', 'b', 't', 'g', 't',
+        0x1B, 0x06, 'k','r','b','t','g','t',
         0x1B, 0x01, 't'
     };
-    
+
     send(sockfd, kerberos_as_req, sizeof(kerberos_as_req), 0);
-    
+
     char buffer[2048];
     int bytes = recv(sockfd, buffer, sizeof(buffer) - 1, 0);
     close(sockfd);
-    
+
     if (bytes > 4) {
         // Skip TCP length prefix
         uint8_t* response = (uint8_t*)(buffer + 4);
         int response_len = bytes - 4;
-        
-        // Check for KRB-ERROR [APPLICATION 30] = 0x7E
-        if (response_len > 10 && response[0] == 0x7E) {
-            // Parse ASN.1 structure to find stime[4] field
-            // KRB-ERROR structure: pvno[0], msg-type[1], ctime[2], cusec[3], stime[4], ...
-            
-            int pos = 2; // Skip APPLICATION tag and length
-            if (pos < response_len && response[pos] == 0x30) {
-                pos += 2; // Skip SEQUENCE tag and length
-                
-                // Skip fields until we reach stime[4]
-                int field_count = 0;
-                while (pos < response_len - 17 && field_count < 5) {
-                    if (response[pos] >= 0xA0 && response[pos] <= 0xAF) {
-                        uint8_t field_tag = response[pos] & 0x0F;
-                        pos++; // Skip context tag
-                        
-                        // Get field length
-                        int field_len = response[pos++];
-                        if (field_len & 0x80) {
-                            // Long form length
-                            int len_bytes = field_len & 0x7F;
-                            field_len = 0;
-                            for (int i = 0; i < len_bytes && pos < response_len; i++) {
-                                field_len = (field_len << 8) | response[pos++];
-                            }
-                        }
-                        
-                        // Check if this is stime[4] field
-                        if (field_tag == 4) {
-                            // Found stime field - should contain KerberosTime (GeneralizedTime)
-                            if (pos < response_len && response[pos] == 0x18) {
-                                pos++; // Skip GeneralizedTime tag
-                                int time_len = response[pos++];
-                                
-                                if (time_len == 15 && pos + 15 <= response_len) {
-                                    // Extract timestamp string
-                                    char timestr[16];
-                                    memcpy(timestr, &response[pos], 15);
-                                    timestr[15] = '\0';
-                                    
-                                    // Validate and format timestamp
-                                    if (timestr[14] == 'Z') {
-                                        char year[5], month[3], day[3], hour[3], min[3], sec[3];
-                                        strncpy(year, timestr, 4); year[4] = '\0';
-                                        strncpy(month, timestr+4, 2); month[2] = '\0';
-                                        strncpy(day, timestr+6, 2); day[2] = '\0';
-                                        strncpy(hour, timestr+8, 2); hour[2] = '\0';
-                                        strncpy(min, timestr+10, 2); min[2] = '\0';
-                                        strncpy(sec, timestr+12, 2); sec[2] = '\0';
-                                        
-                                        std::stringstream ss;
-                                        ss << "Microsoft Windows Kerberos (server time: "
-                                           << year << "-" << month << "-" << day << " "
-                                           << hour << ":" << min << ":" << sec << "Z)";
-                                        return ss.str();
-                                    }
-                                }
-                            }
-                            break;
-                        }
-                        
-                        // Skip this field's data
-                        pos += field_len;
-                        field_count++;
-                    } else {
-                        break;
-                    }
+
+        // Look for GeneralizedTime (0x18) with length 15 ending in 'Z'
+        for (int i = 0; i < response_len - 16; i++) {
+            if (response[i] == 0x18 && response[i+1] == 0x0F) {
+                std::string ts((char*)&response[i+2], 15);
+                if (ts.back() == 'Z') {
+                    std::stringstream ss;
+                    ss << "Microsoft Windows Kerberos (server time: "
+                       << ts.substr(0,4) << "-"  // YYYY
+                       << ts.substr(4,2) << "-"  // MM
+                       << ts.substr(6,2) << " "
+                       << ts.substr(8,2) << ":"  // HH
+                       << ts.substr(10,2) << ":" // MM
+                       << ts.substr(12,2) << "Z)";
+                    return ss.str();
                 }
             }
         }
-        
-        // If we got any response, it's likely Kerberos
+
+        // Got response but no time parsed
         return "Microsoft Windows Kerberos";
     }
-    
-    return "kerberos-sec";
+
+    return "Microsoft Windows Kerberos";
 }
 
 /**
