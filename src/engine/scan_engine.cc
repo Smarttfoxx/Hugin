@@ -1020,14 +1020,14 @@ bool RunLuaScript(const std::string& scriptPath, const std::string& targetIP, in
 }
 /**
  * Enhanced Kerberos service detection for port 88
- * Attempts to get server time and Kerberos realm information
+ * Sends a proper AS-REQ and parses AS-REP to extract server time
  */
 std::string DetectKerberosService(const std::string& ipValue, int port) {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) return "kerberos-sec";
     
     struct timeval timeout;
-    timeout.tv_sec = 3;
+    timeout.tv_sec = 5;
     timeout.tv_usec = 0;
     setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
     setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
@@ -1042,36 +1042,86 @@ std::string DetectKerberosService(const std::string& ipValue, int port) {
         return "kerberos-sec";
     }
     
-    // Simple Kerberos AS-REQ probe to detect Windows Kerberos
-    // This is a minimal probe that should trigger a response
-    uint8_t kerberos_probe[] = {
-        0x6a, 0x81, 0x7e, 0x30, 0x81, 0x7b, 0xa1, 0x03, 0x02, 0x01, 0x05,
-        0xa2, 0x03, 0x02, 0x01, 0x0a, 0xa4, 0x81, 0x6e, 0x30, 0x81, 0x6b,
-        0xa0, 0x07, 0x03, 0x05, 0x00, 0x40, 0x81, 0x00, 0x10, 0xa2, 0x81,
-        0x5f, 0x30, 0x81, 0x5c, 0xa0, 0x03, 0x02, 0x01, 0x17, 0xa2, 0x81,
-        0x54, 0x04, 0x81, 0x51
+    // Proper Kerberos AS-REQ packet to trigger server time response
+    // This is a minimal but valid AS-REQ that should get a KRB_ERROR with server time
+    uint8_t kerberos_as_req[] = {
+        // Length prefix for TCP
+        0x00, 0x6A,
+        // AS-REQ structure
+        0x6A, 0x68,                                     // APPLICATION 10 (AS-REQ)
+        0x30, 0x66,                                     // SEQUENCE
+        0xA1, 0x03, 0x02, 0x01, 0x05,                  // pvno [1] INTEGER (5)
+        0xA2, 0x03, 0x02, 0x01, 0x0A,                  // msg-type [2] INTEGER (AS-REQ = 10)
+        0xA3, 0x0E,                                     // padata [3] SEQUENCE OF PA-DATA
+        0x30, 0x0C,                                     // PA-DATA
+        0xA1, 0x03, 0x02, 0x01, 0x02,                  // padata-type [1] INTEGER (PA-ENC-TIMESTAMP = 2)
+        0xA2, 0x05, 0x04, 0x03, 0x30, 0x01, 0x00,     // padata-value [2] OCTET STRING (dummy encrypted timestamp)
+        0xA4, 0x4A,                                     // req-body [4] KDC-REQ-BODY
+        0x30, 0x48,                                     // SEQUENCE
+        0xA0, 0x07, 0x03, 0x05, 0x00, 0x40, 0x81, 0x00, 0x10, // kdc-options [0] KDCOptions
+        0xA1, 0x0C,                                     // cname [1] PrincipalName
+        0x30, 0x0A,                                     // SEQUENCE
+        0xA0, 0x03, 0x02, 0x01, 0x01,                  // name-type [0] INTEGER (NT-PRINCIPAL = 1)
+        0xA1, 0x03, 0x30, 0x01, 0x1B, 0x00,           // name-string [1] SEQUENCE OF GeneralString
+        0xA2, 0x0A,                                     // realm [2] Realm
+        0x1B, 0x08, 'T', 'E', 'S', 'T', '.', 'C', 'O', 'M', // "TEST.COM"
+        0xA3, 0x0C,                                     // sname [3] PrincipalName  
+        0x30, 0x0A,                                     // SEQUENCE
+        0xA0, 0x03, 0x02, 0x01, 0x02,                  // name-type [0] INTEGER (NT-SRV-INST = 2)
+        0xA1, 0x03, 0x30, 0x01, 0x1B, 0x00,           // name-string [1] SEQUENCE OF GeneralString
+        0xA5, 0x11,                                     // till [5] KerberosTime
+        0x18, 0x0F, '2', '0', '3', '7', '0', '9', '1', '8', '2', '1', '4', '7', '4', '8', 'Z',
+        0xA7, 0x06, 0x02, 0x04, 0x1E, 0x00, 0x00, 0x00 // nonce [7] INTEGER
     };
     
-    send(sockfd, kerberos_probe, sizeof(kerberos_probe), 0);
+    send(sockfd, kerberos_as_req, sizeof(kerberos_as_req), 0);
     
-    char buffer[1024];
+    char buffer[2048];
     int bytes = recv(sockfd, buffer, sizeof(buffer) - 1, 0);
     close(sockfd);
     
-    if (bytes > 0) {
-        // Check for Kerberos error response or valid response
-        if (bytes >= 4 && (uint8_t)buffer[0] == 0x7e) {
-            // Get current time for server time display
-            auto now = std::chrono::system_clock::now();
-            auto time_t = std::chrono::system_clock::to_time_t(now);
-            std::stringstream ss;
-            ss << "Microsoft Windows Kerberos (server time: " 
-               << std::put_time(std::gmtime(&time_t), "%Y-%m-%d %H:%M:%S") << "Z)";
-            return ss.str();
+    if (bytes > 4) {
+        // Skip TCP length prefix (first 4 bytes)
+        uint8_t* response = (uint8_t*)(buffer + 4);
+        int response_len = bytes - 4;
+        
+        // Check for KRB-ERROR (APPLICATION 30)
+        if (response_len > 0 && response[0] == 0x7E) {
+            // Parse KRB-ERROR to extract server time (stime field)
+            // Look for GeneralizedTime pattern in the response
+            for (int i = 0; i < response_len - 16; i++) {
+                // Look for ASN.1 GeneralizedTime tag (0x18) followed by length 0x0F (15 bytes)
+                if (response[i] == 0x18 && response[i+1] == 0x0F) {
+                    // Extract the 15-byte timestamp string
+                    char timestr[16];
+                    memcpy(timestr, &response[i+2], 15);
+                    timestr[15] = '\0';
+                    
+                    // Parse the timestamp: YYYYMMDDHHMMSSZ
+                    if (strlen(timestr) == 15 && timestr[14] == 'Z') {
+                        char year[5], month[3], day[3], hour[3], min[3], sec[3];
+                        strncpy(year, timestr, 4); year[4] = '\0';
+                        strncpy(month, timestr+4, 2); month[2] = '\0';
+                        strncpy(day, timestr+6, 2); day[2] = '\0';
+                        strncpy(hour, timestr+8, 2); hour[2] = '\0';
+                        strncpy(min, timestr+10, 2); min[2] = '\0';
+                        strncpy(sec, timestr+12, 2); sec[2] = '\0';
+                        
+                        std::stringstream ss;
+                        ss << "Microsoft Windows Kerberos (server time: "
+                           << year << "-" << month << "-" << day << " "
+                           << hour << ":" << min << ":" << sec << "Z)";
+                        return ss.str();
+                    }
+                }
+            }
         }
+        
+        // If we got any response, it's likely Kerberos
+        return "Microsoft Windows Kerberos";
     }
     
-    return "Microsoft Windows Kerberos";
+    return "kerberos-sec";
 }
 
 /**
