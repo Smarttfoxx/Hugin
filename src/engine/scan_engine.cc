@@ -1080,10 +1080,10 @@ std::string DetectKerberosService(const std::string& ipValue, int port) {
                     ss << "Microsoft Windows Kerberos (server time: "
                        << ts.substr(0,4) << "-"  // YYYY
                        << ts.substr(4,2) << "-"  // MM
-                       << ts.substr(6,2) << " "
+                       << ts.substr(6,2) << " "  // DD
                        << ts.substr(8,2) << ":"  // HH
                        << ts.substr(10,2) << ":" // MM
-                       << ts.substr(12,2) << "Z)";
+                       << ts.substr(12,2) << "Z)";  // SS
                     return ss.str();
                 }
             }
