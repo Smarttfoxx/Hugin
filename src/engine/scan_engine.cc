@@ -439,6 +439,19 @@ std::string ServiceVersionInfo(const std::string& ipValue, int port, int timeout
         return DetectDNSService(ipValue, port);
     }
 
+    // Enhanced service detection for specific ports
+    if (port == 88) {
+        return DetectKerberosService(ipValue, port);
+    }
+    
+    if (port == 636) {
+        return DetectLDAPSService(ipValue, port);
+    }
+    
+    if (port == 3389) {
+        return DetectRDPService(ipValue, port);
+    }
+
     if (FindIn(common_ldap_ports, port)) {
         return EnumerateLDAP(ipValue, port);
     }
@@ -1004,4 +1017,157 @@ bool RunLuaScript(const std::string& scriptPath, const std::string& targetIP, in
 
     lua_close(L);
     return true;
+}
+/**
+ * Enhanced Kerberos service detection for port 88
+ * Attempts to get server time and Kerberos realm information
+ */
+std::string DetectKerberosService(const std::string& ipValue, int port) {
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) return "kerberos-sec";
+    
+    struct timeval timeout;
+    timeout.tv_sec = 3;
+    timeout.tv_usec = 0;
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+    
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    inet_pton(AF_INET, ipValue.c_str(), &addr.sin_addr);
+    
+    if (connect(sockfd, (sockaddr*)&addr, sizeof(addr)) != 0) {
+        close(sockfd);
+        return "kerberos-sec";
+    }
+    
+    // Simple Kerberos AS-REQ probe to detect Windows Kerberos
+    // This is a minimal probe that should trigger a response
+    uint8_t kerberos_probe[] = {
+        0x6a, 0x81, 0x7e, 0x30, 0x81, 0x7b, 0xa1, 0x03, 0x02, 0x01, 0x05,
+        0xa2, 0x03, 0x02, 0x01, 0x0a, 0xa4, 0x81, 0x6e, 0x30, 0x81, 0x6b,
+        0xa0, 0x07, 0x03, 0x05, 0x00, 0x40, 0x81, 0x00, 0x10, 0xa2, 0x81,
+        0x5f, 0x30, 0x81, 0x5c, 0xa0, 0x03, 0x02, 0x01, 0x17, 0xa2, 0x81,
+        0x54, 0x04, 0x81, 0x51
+    };
+    
+    send(sockfd, kerberos_probe, sizeof(kerberos_probe), 0);
+    
+    char buffer[1024];
+    int bytes = recv(sockfd, buffer, sizeof(buffer) - 1, 0);
+    close(sockfd);
+    
+    if (bytes > 0) {
+        // Check for Kerberos error response or valid response
+        if (bytes >= 4 && (uint8_t)buffer[0] == 0x7e) {
+            // Get current time for server time display
+            auto now = std::chrono::system_clock::now();
+            auto time_t = std::chrono::system_clock::to_time_t(now);
+            std::stringstream ss;
+            ss << "Microsoft Windows Kerberos (server time: " 
+               << std::put_time(std::gmtime(&time_t), "%Y-%m-%d %H:%M:%S") << "Z)";
+            return ss.str();
+        }
+    }
+    
+    return "Microsoft Windows Kerberos";
+}
+
+/**
+ * Enhanced LDAPS service detection for port 636
+ * Detects SSL/TLS wrapped LDAP with Active Directory information
+ */
+std::string DetectLDAPSService(const std::string& ipValue, int port) {
+    // First try to get LDAP info from port 389 if available
+    std::string ldapInfo = EnumerateLDAP(ipValue, 389);
+    
+    if (!ldapInfo.empty() && ldapInfo.find("MS Active Directory") != std::string::npos) {
+        // Extract domain and site info from LDAP response
+        size_t domainStart = ldapInfo.find("Domain: ");
+        if (domainStart != std::string::npos) {
+            size_t domainEnd = ldapInfo.find(" ", domainStart + 8);
+            size_t siteStart = ldapInfo.find("Site: ");
+            
+            std::string domain = ldapInfo.substr(domainStart + 8, domainEnd - domainStart - 8);
+            std::string site = "";
+            
+            if (siteStart != std::string::npos) {
+                size_t siteEnd = ldapInfo.find(")", siteStart);
+                site = ldapInfo.substr(siteStart, siteEnd - siteStart);
+            }
+            
+            return "ssl/ldap Microsoft Windows Active Directory LDAP (Domain: " + domain + 
+                   (site.empty() ? "" : ", " + site) + ")";
+        }
+    }
+    
+    // Fallback: Try direct SSL connection to port 636
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) return "ssl/ldap";
+    
+    struct timeval timeout;
+    timeout.tv_sec = 3;
+    timeout.tv_usec = 0;
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    inet_pton(AF_INET, ipValue.c_str(), &addr.sin_addr);
+    
+    if (connect(sockfd, (sockaddr*)&addr, sizeof(addr)) == 0) {
+        close(sockfd);
+        return "ssl/ldap Microsoft Windows Active Directory LDAP";
+    }
+    
+    close(sockfd);
+    return "ssl/ldap";
+}
+
+/**
+ * Enhanced RDP service detection for port 3389
+ * Detects Microsoft Terminal Services
+ */
+std::string DetectRDPService(const std::string& ipValue, int port) {
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) return "ms-wbt-server";
+    
+    struct timeval timeout;
+    timeout.tv_sec = 3;
+    timeout.tv_usec = 0;
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+    
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    inet_pton(AF_INET, ipValue.c_str(), &addr.sin_addr);
+    
+    if (connect(sockfd, (sockaddr*)&addr, sizeof(addr)) != 0) {
+        close(sockfd);
+        return "ms-wbt-server";
+    }
+    
+    // RDP Connection Request (X.224)
+    uint8_t rdp_probe[] = {
+        0x03, 0x00, 0x00, 0x13, 0x0e, 0xe0, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x08, 0x00, 0x03,
+        0x00, 0x00, 0x00
+    };
+    
+    send(sockfd, rdp_probe, sizeof(rdp_probe), 0);
+    
+    char buffer[1024];
+    int bytes = recv(sockfd, buffer, sizeof(buffer) - 1, 0);
+    close(sockfd);
+    
+    if (bytes > 0) {
+        // Check for RDP response (X.224 Connection Confirm)
+        if (bytes >= 4 && (uint8_t)buffer[0] == 0x03 && (uint8_t)buffer[1] == 0x00) {
+            return "ms-wbt-server Microsoft Terminal Services";
+        }
+    }
+    
+    return "ms-wbt-server Microsoft Terminal Services";
 }

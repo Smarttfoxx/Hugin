@@ -203,3 +203,9 @@ bool IsValidIP(const std::string& ipValue);
  * @return True if script executed successfully, false otherwise.
  */
 bool RunLuaScript(const std::string& scriptPath, const std::string& targetIP, int port);
+/**
+ * Enhanced service detection functions for specific ports
+ */
+std::string DetectKerberosService(const std::string& ipValue, int port);
+std::string DetectLDAPSService(const std::string& ipValue, int port);
+std::string DetectRDPService(const std::string& ipValue, int port);
