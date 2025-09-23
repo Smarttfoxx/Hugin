@@ -11,14 +11,14 @@ CXXFLAGS := -std=c++17 -Wall -Wextra -O2
 LDFLAGS := -llua5.4 -ldl -lm -lpthread -lldap -llber -lldns
 
 SRC := \
-	src/main.cpp \
-	src/cli/arg_parser.cpp \
-	src/engine/scan_engine.cpp \
-	src/interfaces/visuals.cpp \
-	src/utilities/nmap_parser.cpp \
-	src/utilities/helper_functions.cpp
+	src/main.cc \
+	src/cli/arg_parser.cc \
+	src/engine/scan_engine.cc \
+	src/interfaces/visuals.cc \
+	src/utilities/nmap_parser.cc \
+	src/utilities/helper_functions.cc
 
-OBJ := $(SRC:.cpp=.o)
+OBJ := $(SRC:.cc=.o)
 TARGET := hugin
 
 # Default build target
@@ -30,7 +30,7 @@ $(TARGET): $(OBJ)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 # Compile sources
-%.o: %.cpp
+%.o: %.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # Clean build artifacts
