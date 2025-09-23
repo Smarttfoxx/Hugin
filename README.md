@@ -20,17 +20,49 @@
 
 ### Requirements
 
-- C++17
-- Linux
-- OpenLDAP
-- LDNS
+- C++17 compiler (g++, clang++)
+- Git
+- Make
 - Lua
+- OpenLDAP
+- ldns
 
 ### Installation
+
+First, clone the repository and navigate to the project directory:
 
 ```bash
 git clone https://github.com/Smarttfoxx/Hugin
 cd Hugin
+```
+
+#### Debian-based Systems (Ubuntu, Debian, etc.)
+
+Install the required dependencies:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y build-essential liblua5.4-dev libldap2-dev libldns-dev
+```
+
+Then, compile and install Hugin:
+
+```bash
+sudo make install
+```
+
+#### Arch-based Systems (Arch Linux, Manjaro, etc.)
+
+Install the required dependencies:
+
+```bash
+sudo pacman -Syu --noconfirm
+sudo pacman -S --noconfirm base-devel lua openldap ldns
+```
+
+Then, compile and install Hugin:
+
+```bash
 sudo make install
 ```
 
