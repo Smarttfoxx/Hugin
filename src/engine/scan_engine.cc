@@ -835,7 +835,32 @@ bool IsHostUpICMP(const std::string& ipValue) {
     ssize_t received = recvfrom(sockfd, recv_buf, sizeof(recv_buf), 0, (sockaddr*)&recv_addr, &addr_len);
     close(sockfd);
 
-    return received > 0;
+    if (received <= 0) {
+        return false;
+    }
+
+    // Parse the IP header to get to the ICMP packet
+    iphdr* ip_header = reinterpret_cast<iphdr*>(recv_buf);
+    int ip_header_len = ip_header->ihl * 4;
+    
+    // Check if we have enough data for ICMP header
+    if (received < static_cast<ssize_t>(ip_header_len + sizeof(icmphdr))) {
+        return false;
+    }
+    
+    // Extract ICMP header
+    icmphdr* icmp_reply = reinterpret_cast<icmphdr*>(recv_buf + ip_header_len);
+    
+    // Only consider ICMP Echo Reply (type 0) as host being up
+    // ICMP Destination Unreachable (type 3) means host is down
+    if (icmp_reply->type == ICMP_ECHOREPLY) {
+        // Verify it's a reply to our ping by checking ID
+        if (icmp_reply->un.echo.id == (getpid() & 0xFFFF)) {
+            return true;
+        }
+    }
+    
+    return false;
 }
 
 /**
