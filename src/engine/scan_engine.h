@@ -25,9 +25,9 @@
 
 // Support for lua scripting
 extern "C" {
-#include <lua.h>
-#include <lualib.h>
-#include <lauxlib.h>
+#include <lua5.4/lua.h>
+#include <lua5.4/lualib.h>
+#include <lua5.4/lauxlib.h>
 }
 
 // C++ libraries
@@ -77,7 +77,7 @@ extern "C" {
 #include "../utilities/log_system.h"
 
 struct HostInstance {
-    const std::string ipValue;
+    std::string ipValue;
     std::vector<int> openPorts;
 
     HostInstance(const std::string& ip) : ipValue(ip){};

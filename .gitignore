@@ -10,4 +10,4 @@
 !.clang-format  # allow config files if needed
 
 # Ignore .vscode folder (for Visual Studio Code)
-.vscode/
+.vscode/hugin

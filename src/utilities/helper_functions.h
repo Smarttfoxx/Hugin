@@ -114,3 +114,10 @@ bool FindIn(std::vector<int>& list, int buf);
  * @return Vector of integers read from the file.
  */
 std::vector<int> ReadFile(const std::string& filename);
+/**
+ * @brief Resolves a hostname to an IP address.
+ * @param hostname The hostname or IP address to resolve.
+ * @return The resolved IP address as a string, or the original input if it's already an IP.
+ *         Returns empty string if resolution fails.
+ */
+std::string ResolveHostname(const std::string& hostname);

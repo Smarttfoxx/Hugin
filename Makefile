@@ -8,7 +8,7 @@ INSTALL_DIRS := wordlists nmap
 
 CXX := g++
 CXXFLAGS := -std=c++17 -Wall -Wextra -O2
-LDFLAGS := -llua -ldl -lm -lpthread -lldap -llber -lldns
+LDFLAGS := -llua5.4 -ldl -lm -lpthread -lldap -llber -lldns
 
 SRC := \
 	src/main.cpp \

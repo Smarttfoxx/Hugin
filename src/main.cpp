@@ -54,9 +54,19 @@ int main(int argc, char* argv[]) {
     }
 
     // --- Host Discovery Phase ---
-    for (const HostInstance& HostObject : config.HostInstances) {
+    for (HostInstance& HostObject : config.HostInstances) {
+        // Try to resolve hostname to IP address if needed
+        std::string resolvedIP = ResolveHostname(HostObject.ipValue);
+        if (resolvedIP.empty()) {
+            logsys.Warning("Failed to resolve hostname or invalid address:", HostObject.ipValue);
+            return 1;
+        }
+        
+        // Update the IP value with the resolved IP (or keep original if it was already an IP)
+        HostObject.ipValue = resolvedIP;
+        
         if (!IsValidIP(HostObject.ipValue)) {
-            logsys.Warning("Invalid address was provided.");
+            logsys.Warning("Invalid IP address after resolution:", HostObject.ipValue);
             return 1;
         }
 

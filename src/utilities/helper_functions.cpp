@@ -95,3 +95,49 @@ std::vector<int> ReadFile(const std::string& filename) {
 
     return output;
 }
+// Additional includes for hostname resolution
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <cstring>
+
+/**
+ * @brief Resolves a hostname to an IP address.
+ * @param hostname The hostname or IP address to resolve.
+ * @return The resolved IP address as a string, or the original input if it's already an IP.
+ *         Returns empty string if resolution fails.
+ */
+std::string ResolveHostname(const std::string& hostname) {
+    // First check if the input is already a valid IP address
+    sockaddr_in addr;
+    if (inet_pton(AF_INET, hostname.c_str(), &(addr.sin_addr)) == 1) {
+        // Input is already a valid IP address, return as-is
+        return hostname;
+    }
+    
+    // Try to resolve hostname to IP address
+    struct addrinfo hints, *result;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET; // IPv4
+    hints.ai_socktype = SOCK_STREAM;
+    
+    int status = getaddrinfo(hostname.c_str(), nullptr, &hints, &result);
+    if (status != 0) {
+        logsys.Warning("Failed to resolve hostname:", hostname, "- Error:", gai_strerror(status));
+        return "";
+    }
+    
+    // Extract IP address from the result
+    struct sockaddr_in* addr_in = (struct sockaddr_in*)result->ai_addr;
+    char ip_str[INET_ADDRSTRLEN];
+    
+    if (inet_ntop(AF_INET, &(addr_in->sin_addr), ip_str, INET_ADDRSTRLEN) == nullptr) {
+        logsys.Warning("Failed to convert resolved address to string for hostname:", hostname);
+        freeaddrinfo(result);
+        return "";
+    }
+    
+    freeaddrinfo(result);
+    logsys.Info("Resolved hostname", hostname, "to IP address", ip_str);
+    return std::string(ip_str);
+}
